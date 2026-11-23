@@ -1,5 +1,5 @@
 import { mulberry32, randInt, shuffle } from './rng';
-import { fixSleepers, metrics } from './solver';
+import { metrics } from './solver';
 import { Cat, Cell, Dir, DX, DY, Level } from './types';
 
 /** share of the board the chain itself fills when maxFree is set (sweep 2026-11-16: 0.6 → 88% levels
@@ -24,6 +24,8 @@ export interface GenParams {
   tangle?: number;
   /** max cats free at one moment (2026-11-16 playtest: 3 early → 1 late); undefined = no limit */
   maxFree?: number;
+  /** GDD 2.0: leave holes instead of filling the board with many tiny cats */
+  sparse?: boolean;
 }
 
 /**
@@ -49,7 +51,7 @@ export function generateOnce(seed: number, p: GenParams, id: string): Level {
 
   const cats: Cat[] = [];
   // with a free-cat limit the chain is built sparse (lanes stay long), fillGaps grows tails into the rest
-  const target = Math.floor(p.fill * w * h * (p.maxFree ? FILL_K : 1));
+  const target = Math.floor(p.fill * w * h * (p.maxFree && !p.sparse ? FILL_K : 1));
   let filled = boxes.length;
   let fails = 0;
 
@@ -178,11 +180,9 @@ export function generateOnce(seed: number, p: GenParams, id: string): Level {
     place(made, made.cells.length >= 3 && r() < p.sleepy);
     filled += made.cells.length;
   }
-  fillGaps();
+  if (!p.sparse) fillGaps();
   if (p.rare !== undefined && cats.length) cats[Math.floor(r() * cats.length)].breed = p.rare;
-  const level: Level = { id, w, h, cats, boxes };
-  fixSleepers(level);
-  return level;
+  return { id, w, h, cats, boxes };
 
   /**
    * Leaves no empty cells (playtest: holes look unfinished). Keeps solvability: removal order is the

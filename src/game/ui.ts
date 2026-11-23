@@ -9,33 +9,33 @@ export const H = 1280;
 export const FONT = '"Nunito", "Trebuchet MS", "Segoe UI", Arial, sans-serif';
 
 /**
- * Palette "Warm café storybook" (Art/PROMPTS.md, art bible). Warm low-chroma world,
- * saturated characters, one hero accent (apricot) and one cool accent (teal = fish, boosters).
+ * Palette "Neon Candy / Arcade Pop" (GDD 2.0 §12.1): saturated accents and rewards, calm light surfaces
+ * around the board, deep plum ink for outlines and text. Cat coats keep their own colors.
  */
 export const C = {
-  bg: 0xfbf1e3, // cream paper
-  ink: '#4a3328', // cocoa, all text and outlines
-  inkN: 0x4a3328,
-  muted: '#7a604e', // secondary text, 5:1 on cream
-  primary: 0xff9e5e, // apricot, hero CTA
-  green: 0x8fd07a, // success / done states
-  blue: 0x6cc6bd, // teal, boosters and sharing
-  pink: 0xf7b9c4,
-  purple: 0xc9b6ee,
-  gold: 0xffc94a, // rewards, rewarded ads
-  panel: 0xfff9f0,
-  latte: 0xf1e0c8,
-  gray: 0xeadbc6,
-  coral: 0xf0606e,
+  bg: 0xfff8ef, // warm light surface
+  ink: '#39243f', // deep plum ink, all text and outlines
+  inkN: 0x39243f,
+  muted: '#6e5577', // secondary text, ≥ 4.5:1 on the light surface
+  primary: 0xff3d9a, // hot pink, primary CTA
+  green: 0xff3d9a, // legacy "go" buttons share the primary CTA
+  blue: 0x22d3e6, // bright cyan, boosters and sharing
+  pink: 0xff8fc4,
+  purple: 0x7957f5, // special mechanics, rarity
+  gold: 0xffd600, // sun yellow, rewards and rewarded ads
+  panel: 0xfff8ef,
+  latte: 0xffe9f3,
+  gray: 0xf1e6f4,
+  coral: 0xff654d,
 };
 
 /** Face / lip (3D bottom edge) / text style per button kind. */
 type Kind = 'primary' | 'gold' | 'teal' | 'secondary';
 const KIND: Record<Kind, { face: number; lip: number; top: number; text: string; stroke: boolean }> = {
-  primary: { face: 0xff9e5e, lip: 0xd9713a, top: 0xffb985, text: '#ffffff', stroke: true },
-  gold: { face: 0xffc94a, lip: 0xd99a22, top: 0xffdb80, text: C.ink, stroke: false },
-  teal: { face: 0x6cc6bd, lip: 0x3f958d, top: 0x93d8d1, text: '#ffffff', stroke: true },
-  secondary: { face: 0xfff9f0, lip: 0xe2c7a4, top: 0xffffff, text: C.ink, stroke: false },
+  primary: { face: 0xff3d9a, lip: 0xc21f72, top: 0xff7dbb, text: '#ffffff', stroke: true },
+  gold: { face: 0xffd600, lip: 0xd9a400, top: 0xffe866, text: C.ink, stroke: false },
+  teal: { face: 0x22d3e6, lip: 0x1497a6, top: 0x7be6f1, text: '#ffffff', stroke: true },
+  secondary: { face: 0xfff8ef, lip: 0xe3cbe8, top: 0xffffff, text: C.ink, stroke: false },
 };
 const kindOf = (color?: number): Kind =>
   color === C.primary || color === C.green ? 'primary' : color === C.gold ? 'gold' : color === C.blue ? 'teal' : 'secondary';
@@ -47,7 +47,7 @@ export function txt(s: Phaser.Scene, x: number, y: number, str: string, size = 3
 }
 
 /** Card / panel with a soft 3D lip. */
-export function panel(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, r = 30, face: number = C.panel, lip = 0xe2c7a4) {
+export function panel(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, r = 30, face: number = C.panel, lip = 0xe3cbe8) {
   g.fillStyle(lip, 1).fillRoundedRect(x, y + 8, w, h, r);
   g.fillStyle(face, 1).fillRoundedRect(x, y, w, h, r);
   g.lineStyle(5, C.inkN, 1).strokeRoundedRect(x, y, w, h + 8, r);
@@ -160,7 +160,7 @@ export interface ModalBtn {
   disabled?: boolean;
 }
 
-export const DIM = 0x2b1d16; // warm cocoa scrim instead of black
+export const DIM = 0x2a1530; // plum scrim instead of black
 
 function scrim(s: Phaser.Scene, alpha = 0.55) {
   const dim = s.add.rectangle(W / 2, H / 2, W, H, DIM, alpha).setInteractive();
@@ -199,7 +199,7 @@ export function modal(s: Phaser.Scene, title: string, lines: string[], buttons: 
   const ph = ph0 + extra;
   panel(g, 60, top, W - 120, ph, 40);
   g.fillStyle(C.latte, 1).fillRoundedRect(63, top + 3, W - 126, 104, { tl: 37, tr: 37, bl: 0, br: 0 });
-  g.lineStyle(3, 0xe2c7a4, 1).lineBetween(64, top + 107, W - 64, top + 107);
+  g.lineStyle(3, 0xe3cbe8, 1).lineBetween(64, top + 107, W - 64, top + 107);
   tt.y = top + 56;
   box.y = top;
   box.h = ph;

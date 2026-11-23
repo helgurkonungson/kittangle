@@ -2,12 +2,17 @@ import { CAFE_ROOMS, CAFE_SLOTS } from './content';
 import { tiersFromTasks } from './meta';
 
 export interface DailyResult {
+  /** paws 1..3 (named hearts before GDD 2.0; kept for old saves and share links) */
   hearts: number;
   time: number;
 }
 
 export interface SaveData {
-  v: 6;
+  v: 7;
+  /** music toggle, separate from sound (GDD 2.0 §12.2) */
+  musicOff: boolean;
+  /** chapter-1 satisfaction check: shown once (GDD 2.0 §10.4) */
+  feedback: { asked: boolean; answer: string };
   visit: { visitor: number; until: number; lastSeen: number };
   setsClaimed: string[];
   accessories: string[];
@@ -26,7 +31,7 @@ export interface SaveData {
   stars: number;
   /** completed café task ids, see core/meta.ts */
   tasksDone: string[];
-  /** best hearts left per level number */
+  /** best paws (1..3) per level number */
   best: Record<number, number>;
   /** chapter key -> still flawless (no lost hearts) */
   flawless: Record<string, boolean>;
@@ -57,11 +62,13 @@ export interface SaveData {
   purchases: string[];
 }
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export function defaultSave(): SaveData {
   return {
-    v: 6,
+    v: 7,
+    musicOff: false,
+    feedback: { asked: false, answer: '' },
     visit: { visitor: -1, until: 0, lastSeen: 0 },
     setsClaimed: [],
     accessories: [],
@@ -113,7 +120,9 @@ export function migrate(raw: unknown): SaveData {
   return {
     ...base,
     ...s,
-    v: 6,
+    v: 7,
+    // v7 (GDD 2.0): hearts became paws, the campaign was rebuilt; progress is kept
+    feedback: { ...base.feedback, ...(s.feedback ?? {}) },
     tasksDone,
     visit: { ...base.visit, ...(s.visit ?? {}) },
     event: { ...base.event, ...(s.event ?? {}) },

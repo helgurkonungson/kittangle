@@ -18,7 +18,7 @@ DST = Path(__file__).resolve().parents[2] / 'public' / 'art'
 RULES = {
     'heads': (192, True), 'tails': (128, True), 'portraits': (320, True), 'obstacles': (128, True),
     'overlays': (128, True), 'ui': (128, True), 'accessories': (192, True), 'story': (384, True),
-    'cafe': (384, True), 'backgrounds': (1280, False), 'kittens': (256, True),
+    'cafe': (384, True), 'backgrounds': (1280, False), 'kittens': (256, True), 'map': (256, True),
 }
 FULL_FRAME = ('cafe_room', 'bg_', 'chapter', 'cover')
 
@@ -28,7 +28,9 @@ except ImportError:
     remove = None
     print('rembg not installed: backgrounds will be kept (pip install rembg)')
 
-manifest = {}
+# imports are additive: keys from earlier batches stay unless this batch replaces them
+_mf = DST / 'manifest.json'
+manifest = json.loads(_mf.read_text()) if _mf.exists() else {}
 # hosted Qwen stamps a small "Qwen" logo in the bottom-right corner: blobs fully inside this zone are dropped,
 # full-frame images are cropped so the zone never shows
 WM = (0.86, 0.90)
@@ -135,6 +137,25 @@ for sid, spec in SHEETS.items():
     if not cands:
         continue
     f = max(cands, key=lambda p: p.stat().st_mtime)
+    if 'frame' in spec:  # full-frame cells (backgrounds, rooms): exact grid crop, kept opaque, saved as JPEG
+        src = Image.open(f).convert('RGB')
+        W, H = src.size
+        cw, ch = W / spec['cols'], H / spec['rows']
+        inset = spec.get('inset', 0)
+        for i, name in enumerate(spec['names']):
+            if not name:
+                continue
+            r, c = divmod(i, spec['cols'])
+            cell = src.crop((int(c * cw) + inset, int(r * ch) + inset, int((c + 1) * cw) - inset, int((r + 1) * ch) - inset))
+            w = spec['frame']
+            cell = cell.resize((w, int(w * cell.height / cell.width)), Image.LANCZOS)
+            folder, stem = name.split('/')
+            out = DST / folder / (stem + '.jpg')
+            out.parent.mkdir(parents=True, exist_ok=True)
+            cell.save(out, quality=86, optimize=True)
+            manifest[stem] = f'{folder}/{stem}.jpg'
+            print('ok frame cell', stem, cell.size)
+        continue
     for name, im in zip(spec['names'], cut_sheet(f, spec['rows'], spec['cols'])):
         if not name:
             continue

@@ -11,6 +11,8 @@ let unlocked = false;
 const buffers = new Map<string, AudioBuffer>();
 let musicSrc: AudioBufferSourceNode | null = null;
 let musicWanted: string | null = null;
+let musicOff = false; // separate music toggle (GDD 2.0 §12.2): SFX can stay on
+const musicLoading = new Set<string>();
 const BASE = `${import.meta.env.BASE_URL}audio/`;
 
 if (typeof window !== 'undefined')
@@ -68,8 +70,9 @@ async function loadAudio() {
     const res = await fetch(BASE + 'manifest.json');
     if (!res.ok) return;
     const names: string[] = await res.json();
+    // music is decoded only when wanted (a 2-minute stereo loop is ~40 MB of PCM)
     await Promise.all(
-      names.map(async (n) => {
+      names.filter((n) => !n.startsWith('music_')).map(async (n) => {
         try {
           const r = await fetch(`${BASE}${n}.mp3`);
           if (r.ok) buffers.set(n, await c.decodeAudioData(await r.arrayBuffer()));
@@ -121,8 +124,24 @@ function tone(f0: number, f1: number, dur: number, type: OscillatorType, vol = 0
 export function playMusic(name: string) {
   musicWanted = name;
   const c = ac();
+  if (!c || musicOff) return;
   const buf = buffers.get(name);
-  if (!c || !buf || musicSrc?.buffer === buf) return;
+  if (!buf) {
+    if (musicLoading.has(name)) return;
+    musicLoading.add(name);
+    void fetch(`${BASE}${name}.mp3`)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+      .then((b) => c.decodeAudioData(b))
+      .then((d) => {
+        for (const k of [...buffers.keys()]) if (k.startsWith('music_') && k !== musicWanted) buffers.delete(k);
+        buffers.set(name, d);
+        if (musicWanted === name) playMusic(name);
+      })
+      .catch(() => undefined)
+      .finally(() => musicLoading.delete(name));
+    return;
+  }
+  if (musicSrc?.buffer === buf) return;
   stopMusic();
   const src = c.createBufferSource();
   src.buffer = buf;
@@ -133,6 +152,13 @@ export function playMusic(name: string) {
   src.connect(g).connect(c.destination);
   src.start();
   musicSrc = src;
+}
+
+/** Player's music toggle, independent of the sound toggle. */
+export function setMusicOff(off: boolean) {
+  musicOff = off;
+  if (off) stopMusic();
+  else if (musicWanted) playMusic(musicWanted);
 }
 
 export function stopMusic() {
@@ -217,18 +243,33 @@ const seq = (notes: number[], step: number, type: OscillatorType, vol: number) =
 
 export const sfx = {
   click: () => file('ui_click', 0.5) || tone(900, 700, 0.06, 'triangle', 0.08),
-  meow: (pitch = 1) => meowSynth(pitch, 0.5),
+  /** generated meows (Stable Audio), synth voices as fallback */
+  meow: (pitch = 1) => file('meow', 0.55, pitch) || meowSynth(pitch, 0.5),
   slide: () => file('slide', 0.35),
+  pop: () => file('pop', 0.5),
   purr: () => file('purr', 0.7) || tone(70, 55, 0.35, 'sawtooth', 0.05),
-  bonk: () => file('bonk', 0.8) || (tone(180, 60, 0.18, 'square', 0.12), tone(1200, 300, 0.2, 'sawtooth', 0.04, 0.05)),
-  wake: () => file('wake', 0.7) || tone(300, 600, 0.2, 'sine', 0.1),
-  coin: () => file('coin', 0.5) || tone(1300, 1800, 0.08, 'square', 0.05),
-  combo: (n: number) => file('combo', 0.6, Math.min(1.6, 1 + n * 0.08)) || tone(900 + n * 80, 1400 + n * 80, 0.12, 'triangle', 0.08),
+  bonk: () => {
+    if (!file('bonk', 0.7)) (tone(180, 60, 0.18, 'square', 0.12), tone(1200, 300, 0.2, 'sawtooth', 0.04, 0.05));
+    file('huff', 0.45);
+  },
+  wake: () => file('wake', 0.6) || tone(300, 600, 0.2, 'sine', 0.1),
+  coin: () => file('coin', 0.45) || tone(1300, 1800, 0.08, 'square', 0.05),
+  combo: (n: number) => file('coin', 0.5, Math.min(1.6, 1 + n * 0.08)) || tone(900 + n * 80, 1400 + n * 80, 0.12, 'triangle', 0.08),
   star: () => file('star', 0.7) || tone(1000, 1600, 0.2, 'sine', 0.1),
   task: () => file('task', 0.7) || tone(600, 900, 0.15, 'triangle', 0.1),
   scene: () => file('scene', 0.5),
-  chest: () => file('chest', 0.8) || seq([660, 880, 1320], 0.08, 'triangle', 0.1),
-  tips: () => file('tips', 0.7) || tone(1500, 2000, 0.1, 'square', 0.05),
-  win: () => file('win', 0.7) || seq([523, 659, 784, 1046], 0.1, 'triangle', 0.12),
-  lose: () => file('lose', 0.7) || seq([392, 330, 262], 0.15, 'triangle', 0.1),
+  chest: () => file('unlock', 0.8) || seq([660, 880, 1320], 0.08, 'triangle', 0.1),
+  tips: () => file('coin', 0.6) || tone(1500, 2000, 0.1, 'square', 0.05),
+  win: () => file('star', 0.75) || seq([523, 659, 784, 1046], 0.1, 'triangle', 0.12),
+  chapter: () => file('chapter', 0.8) || seq([523, 659, 784, 1046, 1318], 0.1, 'triangle', 0.12),
+  daily: () => file('daily', 0.8) || seq([523, 659, 784, 1046], 0.1, 'triangle', 0.12),
+  hint: () => file('hint', 0.6) || tone(1200, 1800, 0.15, 'sine', 0.08),
+  preview: () => file('preview', 0.4),
+  kitten: () => file('kitten', 0.7) || tone(900, 1400, 0.15, 'sine', 0.08),
+  box: () => file('box', 0.7) || tone(120, 70, 0.12, 'square', 0.1),
+  node: () => file('node', 0.5) || tone(800, 1000, 0.06, 'triangle', 0.08),
+  unlock: () => file('unlock', 0.7),
+  scratchyWarn: () => file('scratchy_warn', 0.6),
+  scratchySwipe: () => file('scratchy_swipe', 0.7) || tone(2400, 600, 0.15, 'sawtooth', 0.05),
+  scratchySmug: () => file('scratchy_smug', 0.6),
 };

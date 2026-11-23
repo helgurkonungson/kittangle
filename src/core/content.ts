@@ -3,6 +3,8 @@ export interface Breed {
   body: number;
   accent: number;
   rare?: boolean;
+  /** recurring character, not a collectible variant (GDD 2.0 §6) */
+  special?: boolean;
 }
 
 export const BREEDS: Breed[] = [
@@ -18,10 +20,16 @@ export const BREEDS: Breed[] = [
   { key: 'sphynx', body: 0xf2c6c2, accent: 0xe0a8a2, rare: true },
   { key: 'bengal', body: 0xe8b35a, accent: 0x7a4b1e, rare: true },
   { key: 'golden', body: 0xffd54a, accent: 0xf0a500, rare: true },
+  // Scratchy: charcoal blue-gray, coral neckerchief (drawn in drawCat)
+  { key: 'scratchy', body: 0x5b6577, accent: 0x454d5c, special: true },
 ];
+/** index of Scratchy in BREEDS */
+export const SCRATCHY = 12;
+/** the twelve collectible variants */
+export const COLLECTIBLE = BREEDS.filter((b) => !b.special).length;
 
-// raised 2026-11-16: big boards earn many fish, boosters must stay a real decision
-export const COST = { hint: 60, feed: 150, heart: 100 };
+// GDD 2.0 §11: hint is the only booster (feed and hearts are gone); boards are small again
+export const COST = { hint: 30 };
 export const FISH_PER_CAT = 1;
 export const levelReward = (n: number, hard: boolean) => (hard ? 40 : 10 + ((n * 7) % 11));
 export const DAILY_REWARD = 30;

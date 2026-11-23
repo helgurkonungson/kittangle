@@ -5,13 +5,15 @@ import Phaser from 'phaser';
  * cocoa outline, flat base + one shade tone, light from the top-left.
  * When generated art `icon_<name>` exists it wins (see iconKey).
  */
-export const INK = 0x4a3328;
+export const INK = 0x39243f;
 const S = 96; // texture size
 const OL = 6; // outline width
 
 export type IconName =
   | 'fish' | 'next' | 'star' | 'heart' | 'heart_empty' | 'paw' | 'back' | 'sound' | 'mute' | 'hint' | 'feed'
-  | 'daily' | 'cafe' | 'collection' | 'gift' | 'play' | 'clock' | 'check' | 'lock' | 'flame';
+  | 'daily' | 'cafe' | 'collection' | 'gift' | 'play' | 'clock' | 'check' | 'lock' | 'flame'
+  // art-only icons (GDD 2.0 sheets A10–A12); fall back to a drawn icon when the art is missing
+  | 'map' | 'music' | 'settings' | 'chest' | 'medal' | 'sleep' | 'family' | 'box' | 'flag' | 'feedback' | 'badge' | 'scratchy';
 
 /** Generated-art key used when the file exists (Art/PROMPTS.md 1.5 / 1.12). */
 const ART: Partial<Record<IconName, string>> = {
@@ -19,15 +21,27 @@ const ART: Partial<Record<IconName, string>> = {
   paw: 'icon_paw_token', hint: 'icon_hint', feed: 'icon_feed', gift: 'icon_gift',
   sound: 'icon_sound_on', mute: 'icon_sound_off', daily: 'icon_daily', cafe: 'icon_cafe',
   collection: 'icon_collection', lock: 'icon_lock', flame: 'icon_streak',
+  map: 'icon_map', music: 'icon_music', settings: 'icon_settings', chest: 'icon_chest', medal: 'icon_paw_medal',
+  sleep: 'sleep_zzz', family: 'family_link', box: 'box_0', flag: 'icon_flag', feedback: 'icon_feedback', badge: 'icon_chapter_badge', scratchy: 'scratchy_idle',
+};
+/** drawn stand-ins for art-only icons */
+const FALLBACK: Partial<Record<IconName, IconName>> = {
+  map: 'play', music: 'sound', settings: 'sound', chest: 'gift', medal: 'paw', sleep: 'clock', family: 'heart', box: 'lock',
+  flag: 'star', feedback: 'heart', badge: 'star', scratchy: 'paw',
 };
 
-export function iconKey(s: Phaser.Scene, n: IconName) {
+export function iconKey(s: Phaser.Scene, n: IconName): string {
   const a = ART[n];
-  return a && s.textures.exists(a) ? a : `i_${n}`;
+  if (a && s.textures.exists(a)) return a;
+  if (s.textures.exists(`i_${n}`)) return `i_${n}`;
+  const f = FALLBACK[n];
+  return f ? iconKey(s, f) : `i_${n}`;
 }
 
+/** Icon fitted into a size×size box (art is trimmed, so it is not always square). */
 export function icon(s: Phaser.Scene, n: IconName, x: number, y: number, size: number) {
-  return s.add.image(x, y, iconKey(s, n)).setDisplaySize(size, size);
+  const im = s.add.image(x, y, iconKey(s, n));
+  return im.setScale(size / Math.max(im.width, im.height));
 }
 
 type G = Phaser.GameObjects.Graphics;
@@ -73,7 +87,7 @@ const star = (cx: number, cy: number, R: number, r: number) =>
     return { x: cx + Math.cos(a) * k, y: cy + Math.sin(a) * k };
   });
 
-const DRAW: Record<IconName, (g: G) => void> = {
+const DRAW: Partial<Record<IconName, (g: G) => void>> = {
   fish: (g) => {
     poly(g, [{ x: 58, y: 48 }, { x: 88, y: 26 }, { x: 88, y: 70 }], 0x5ec4b8);
     g.fillStyle(INK, 1).fillEllipse(40, 48, 64 + OL * 2, 46 + OL * 2);
@@ -177,7 +191,7 @@ function heart(g: G, fill: number, shade: number) {
 
 /** Bakes every icon into a texture once per game. */
 export function bakeIcons(s: Phaser.Scene) {
-  for (const [n, draw] of Object.entries(DRAW)) {
+  for (const [n, draw] of Object.entries(DRAW) as [string, (g: G) => void][]) {
     const key = `i_${n}`;
     if (s.textures.exists(key)) continue;
     const g = s.make.graphics({}, false);

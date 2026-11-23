@@ -7,7 +7,7 @@ import { setLang, t } from '../i18n';
 import type { IPlatform } from '../platform/IPlatform';
 import { CrazyGamesPlatform } from '../platform/crazygames';
 import { clearLocalSave, LocalPlatform } from '../platform/local';
-import { setForcedMute, setMuted } from './sfx';
+import { setForcedMute, setMusicOff, setMuted } from './sfx';
 
 // one build per portal: `vite build --mode crazygames` etc.
 export const platform: IPlatform = import.meta.env.MODE === 'crazygames' ? new CrazyGamesPlatform() : new LocalPlatform();
@@ -24,6 +24,7 @@ export async function initState() {
   if (q.get('fish')) save.fish = Number(q.get('fish')) || save.fish;
   setLang(q.get('lang') || platform.language());
   setMuted(save.muted);
+  setMusicOff(save.musicOff);
   if (!save.tips.since) save.tips.since = Date.now();
 }
 

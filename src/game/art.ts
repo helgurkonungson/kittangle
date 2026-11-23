@@ -2,11 +2,12 @@ import Phaser from 'phaser';
 import { BREEDS } from '../core/content';
 import { drawCat, type Mood } from './drawCat';
 import { bakeIcons } from './icons';
+import { platform, save } from './state';
 
 const BASE = `${import.meta.env.BASE_URL}art/`;
 /** Art for content that is not in the game yet (update 1 nursery/kittens/new breeds, update 2 winter house/yarn):
  *  imported and shipped in public/art, but not loaded until its feature is wired (first-load budget < 5 MB). */
-const LATER = /^(kitten_|decor_r[34]_|yarn_|resident_(mila|pryazhka)|icon_(bond|yarn)|(head|tail|portrait)_(scottish|tuxedo)|cafe_room[34]$)/;
+const LATER = /^(kitten_|decor_r[34]_|yarn_|resident_(mila|pryazhka)|icon_(bond|yarn|key|fish_token|fb_|feedback|share|new_cat|preview|pause|flag)|(head|tail|portrait)_(scottish|tuxedo)|cafe_room[34]$|map_|ob_|cat_bed|bg_menu|chapter[12]_cover)/;
 
 /** Loads generated art listed in public/art/manifest.json ({ key: "folder/file.png" }); none is fine. */
 export class PreloadScene extends Phaser.Scene {
@@ -22,9 +23,17 @@ export class PreloadScene extends Phaser.Scene {
     bakeIcons(this);
     const m = (this.cache.json.get('art_manifest') ?? {}) as Record<string, string>;
     const keys = Object.keys(m).filter((k) => !LATER.test(k));
-    if (!keys.length) return this.scene.start('Menu');
+    // first run: straight into level 1, no title screen (GDD 2.0 §4); later the chapter map
+    const go = () => {
+      platform.ready();
+      const dev = Number(new URLSearchParams(location.search).get('play')); // dev: ?play=14 opens a level
+      if (dev > 0) this.scene.start('Level', { mode: 'level', n: dev });
+      else if (save.level === 1 && !save.best[1]) this.scene.start('Level', { mode: 'level', n: 1 });
+      else this.scene.start('Map');
+    };
+    if (!keys.length) return go();
     for (const k of keys) this.load.image(k, BASE + m[k]);
-    this.load.once('complete', () => this.scene.start('Menu'));
+    this.load.once('complete', go);
     this.load.start();
   }
 }

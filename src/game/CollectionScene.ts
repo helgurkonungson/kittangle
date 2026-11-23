@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { tipOnce } from './tips';
-import { BREEDS } from '../core/content';
+import { COLLECTIBLE, BREEDS } from '../core/content';
 import { setComplete, SETS } from '../core/live';
 import { rewardText } from '../core/retention';
 import { t } from '../i18n';
@@ -27,9 +27,9 @@ export class CollectionScene extends Phaser.Scene {
     this.time.delayedCall(350, () => tipOnce(this, 'collection'));
     if (this.msg) this.time.delayedCall(50, () => toast(this, this.msg, 1150));
     art(this, 'bg_album', W / 2, H / 2, W, H, true);
-    backButton(this, () => this.scene.start('Menu'));
+    backButton(this, () => this.scene.start('Map'));
     txt(this, W / 2, 70, t('collection'), 40);
-    txt(this, W / 2, 135, t('collectionProgress', { a: save.breeds.length, b: BREEDS.length }), 28);
+    txt(this, W / 2, 135, t('collectionProgress', { a: save.breeds.length, b: COLLECTIBLE }), 28);
 
     SETS.forEach((set, si) => {
       const top = 190 + si * 330;
@@ -61,7 +61,7 @@ export class CollectionScene extends Phaser.Scene {
     const breed = BREEDS[b];
     const have = save.breeds.includes(b);
     const g = this.add.graphics();
-    panel(g, cx - 78, cy - 115, 156, 222, 22, breed.rare ? 0xfff1c9 : C.panel, breed.rare ? 0xe9c56a : 0xe2c7a4);
+    panel(g, cx - 78, cy - 115, 156, 222, 22, breed.rare ? 0xfff1c9 : C.panel, breed.rare ? 0xe9c56a : 0xe3cbe8);
     if (have) {
       if (!art(this, `portrait_${breed.key}`, cx, cy - 20, 130, 130)) drawCat(this.add.graphics(), [{ x: cx + 25, y: cy - 25 }, { x: cx - 25, y: cy - 25 }], b, 72, 'happy', false, save.equipped[b]);
       txt(this, cx, cy + 58, t('breed_' + breed.key), 22).setWordWrapWidth(150, true);

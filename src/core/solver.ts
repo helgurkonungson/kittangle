@@ -1,9 +1,16 @@
 import { Board } from './board';
 import { Level } from './types';
 
+/** Board as the solver sees it: sleepers cost one extra tap, they never block a solution. */
+function awakeBoard(level: Level) {
+  const b = new Board(level);
+  b.asleep.clear();
+  return b;
+}
+
 /** Greedy solver. Exact for this game because removing a cat never blocks another one. */
 export function solve(level: Level) {
-  const b = new Board(level);
+  const b = awakeBoard(level);
   const waves: number[][] = [];
   while (b.count) {
     const free = b.freeCats();
@@ -12,27 +19,6 @@ export function solve(level: Level) {
     waves.push(free);
   }
   return { solvable: true, waves };
-}
-
-/**
- * A sleepy cat wakes only when a neighbour leaves, so a random sleeper can end up never waking.
- * Wakes (un-sleeps) the sleepers that block the greedy run; keeps every generated level solvable.
- */
-export function fixSleepers(level: Level) {
-  const b = new Board(level);
-  while (b.count) {
-    const free = b.freeCats();
-    if (free.length) {
-      free.forEach((id) => b.remove(id));
-      continue;
-    }
-    const stuck = [...b.asleep].filter((id) => b.check(id).free);
-    if (!stuck.length) return;
-    for (const id of stuck) {
-      b.asleep.delete(id);
-      level.cats.find((c) => c.id === id)!.sleepy = false;
-    }
-  }
 }
 
 export function metrics(level: Level) {
@@ -57,7 +43,7 @@ export function metrics(level: Level) {
  * greedy policy (remove the free cat whose removal leaves the most free cats) and keep the max.
  */
 export function peakFree(level: Level) {
-  const b = new Board(level);
+  const b = awakeBoard(level);
   let peak = 0;
   while (b.count) {
     const free = b.freeCats();
@@ -67,11 +53,9 @@ export function peakFree(level: Level) {
     let bestN = -1;
     for (const id of free) {
       const c = b.cats.get(id)!;
-      const sleeping = new Set(b.asleep);
       b.remove(id);
       const n = b.freeCats().length;
       b.cats.set(id, c);
-      b.asleep = sleeping;
       for (const p of c.cells) b.grid[p.y * b.w + p.x] = id;
       if (n > bestN) {
         bestN = n;

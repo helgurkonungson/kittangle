@@ -479,5 +479,289 @@
    "story/resident_pryazhka_ashamed",
    "story/resident_pryazhka_happy"
   ]
+ },
+ "A01_heads_neutral": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "heads/head_ginger_calm",
+   "heads/head_gray_calm",
+   "heads/head_black_calm",
+   "heads/head_white_calm",
+   "heads/head_calico_calm",
+   "heads/head_siamese_calm",
+   "heads/head_british_calm",
+   "heads/head_tabby_calm",
+   "heads/head_mainecoon_calm",
+   "heads/head_sphynx_calm",
+   "heads/head_bengal_calm",
+   "heads/head_golden_calm"
+  ]
+ },
+ "A02_heads_happy": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "heads/head_ginger_happy",
+   "heads/head_gray_happy",
+   "heads/head_black_happy",
+   "heads/head_white_happy",
+   "heads/head_calico_happy",
+   "heads/head_siamese_happy",
+   "heads/head_british_happy",
+   "heads/head_tabby_happy",
+   "heads/head_mainecoon_happy",
+   "heads/head_sphynx_happy",
+   "heads/head_bengal_happy",
+   "heads/head_golden_happy"
+  ]
+ },
+ "A03_heads_offended": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "heads/head_ginger_offended",
+   "heads/head_gray_offended",
+   "heads/head_black_offended",
+   "heads/head_white_offended",
+   "heads/head_calico_offended",
+   "heads/head_siamese_offended",
+   "heads/head_british_offended",
+   "heads/head_tabby_offended",
+   "heads/head_mainecoon_offended",
+   "heads/head_sphynx_offended",
+   "heads/head_bengal_offended",
+   "heads/head_golden_offended"
+  ]
+ },
+ "A04_heads_sleeping": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "heads/head_ginger_sleep",
+   "heads/head_gray_sleep",
+   "heads/head_black_sleep",
+   "heads/head_white_sleep",
+   "heads/head_calico_sleep",
+   "heads/head_siamese_sleep",
+   "heads/head_british_sleep",
+   "heads/head_tabby_sleep",
+   "heads/head_mainecoon_sleep",
+   "heads/head_sphynx_sleep",
+   "heads/head_bengal_sleep",
+   "heads/head_golden_sleep"
+  ]
+ },
+ "A05_tails": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "tails/tail_ginger",
+   "tails/tail_gray",
+   "tails/tail_black",
+   "tails/tail_white",
+   "tails/tail_calico",
+   "tails/tail_siamese",
+   "tails/tail_british",
+   "tails/tail_tabby",
+   "tails/tail_mainecoon",
+   "tails/tail_sphynx",
+   "tails/tail_bengal",
+   "tails/tail_golden"
+  ]
+ },
+ "A06_collection_portraits": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "portraits/portrait_ginger",
+   "portraits/portrait_gray",
+   "portraits/portrait_black",
+   "portraits/portrait_white",
+   "portraits/portrait_calico",
+   "portraits/portrait_siamese",
+   "portraits/portrait_british",
+   "portraits/portrait_tabby",
+   "portraits/portrait_mainecoon",
+   "portraits/portrait_sphynx",
+   "portraits/portrait_bengal",
+   "portraits/portrait_golden"
+  ]
+ },
+ "A07_scratchy_states": {
+  "rows": 2,
+  "cols": 2,
+  "names": [
+   "portraits/scratchy_idle",
+   "portraits/scratchy_warn",
+   "portraits/scratchy_swipe",
+   "portraits/scratchy_smug"
+  ]
+ },
+ "A08_scratch_vfx": {
+  "rows": 2,
+  "cols": 3,
+  "names": [
+   "overlays/fx_scratch_0",
+   "overlays/fx_scratch_1",
+   "overlays/fx_scratch_2",
+   "overlays/fx_scratch_3",
+   "overlays/fx_scratch_4",
+   "overlays/fx_scratch_5"
+  ]
+ },
+ "A09_npc_portraits": {
+  "rows": 2,
+  "cols": 5,
+  "names": [
+   "story/mentor_murr_calm",
+   "story/mentor_murr_happy",
+   "story/mentor_murr_surprised",
+   "story/resident_bun_calm",
+   "story/resident_bun_happy",
+   "story/resident_luna_calm",
+   "story/resident_luna_happy",
+   "story/resident_pryazhka_calm",
+   "story/resident_pryazhka_ashamed",
+   "story/resident_pryazhka_happy"
+  ]
+ },
+ "A10_gameplay_props": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "obstacles/box_0",
+   "obstacles/box_1",
+   "obstacles/box_2",
+   "overlays/sleep_zzz",
+   "obstacles/yarn_0",
+   "overlays/family_link",
+   "ui/icon_key",
+   "ui/icon_paw_token",
+   "ui/icon_fish_token",
+   "obstacles/cat_bed",
+   "obstacles/ob_flower",
+   "obstacles/ob_chimney"
+  ]
+ },
+ "A11_hud_icons": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "ui/icon_fish",
+   "ui/icon_paw_medal",
+   "ui/icon_hint",
+   "ui/icon_preview",
+   "ui/icon_map",
+   "ui/icon_cafe",
+   "ui/icon_collection",
+   "ui/icon_daily",
+   "ui/icon_settings",
+   "ui/icon_sound_on",
+   "ui/icon_music",
+   "ui/icon_pause"
+  ]
+ },
+ "A12_progress_icons": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "ui/icon_chest",
+   "ui/icon_flag",
+   "ui/icon_star",
+   "ui/icon_lock",
+   "ui/icon_new_cat",
+   "ui/icon_fish_pack_s",
+   "ui/icon_share",
+   "ui/icon_fb_good",
+   "ui/icon_fb_neutral",
+   "ui/icon_feedback",
+   "ui/icon_streak",
+   "ui/icon_chapter_badge"
+  ]
+ },
+ "A13_chapter_vignettes": {
+  "rows": 2,
+  "cols": 2,
+  "names": [
+   "map/chapter_vig_1",
+   "map/chapter_vig_2",
+   "map/chapter_vig_3",
+   "map/chapter_vig_4"
+  ]
+ },
+ "A14_board_backgrounds": {
+  "rows": 2,
+  "cols": 2,
+  "names": [
+   "backgrounds/bg_board_floor",
+   "backgrounds/bg_board_garden",
+   "backgrounds/bg_board_roof",
+   "backgrounds/bg_board_kitchen"
+  ],
+  "frame": 640
+ },
+ "A15_map_decor": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "map/map_path",
+   "map/map_node",
+   "map/map_node_milestone",
+   "map/map_gate",
+   "map/map_house",
+   "map/map_garden_gate",
+   "map/map_chimney",
+   "map/map_kitchen_door",
+   "map/map_bridge",
+   "map/map_flowers",
+   "map/map_sign",
+   "map/map_pennants"
+  ]
+ },
+ "A16_cafe_room_backgrounds": {
+  "rows": 1,
+  "cols": 2,
+  "names": [
+   "backgrounds/cafe_room1",
+   "backgrounds/cafe_room2"
+  ],
+  "frame": 720
+ },
+ "A17_cafe_furniture_main": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "cafe/decor_r1_window_0",
+   "cafe/decor_r1_window_1",
+   "cafe/decor_r1_window_2",
+   "cafe/decor_r1_lamp_0",
+   "cafe/decor_r1_lamp_1",
+   "cafe/decor_r1_lamp_2",
+   "cafe/decor_r1_post_0",
+   "cafe/decor_r1_post_1",
+   "cafe/decor_r1_post_2",
+   "cafe/decor_r1_sofa_0",
+   "cafe/decor_r1_sofa_1",
+   "cafe/decor_r1_counter_0"
+  ]
+ },
+ "A18_cafe_furniture_attic": {
+  "rows": 3,
+  "cols": 4,
+  "names": [
+   "cafe/decor_r2_window_0",
+   "cafe/decor_r2_window_1",
+   "cafe/decor_r2_window_2",
+   "cafe/decor_r2_lamp_0",
+   "cafe/decor_r2_lamp_1",
+   "cafe/decor_r2_lamp_2",
+   "cafe/decor_r2_post_0",
+   "cafe/decor_r2_post_1",
+   "cafe/decor_r2_post_2",
+   "cafe/decor_r2_sofa_0",
+   "cafe/decor_r2_sofa_1",
+   "cafe/decor_r2_sofa_2"
+  ]
  }
 }

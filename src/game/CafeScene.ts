@@ -53,7 +53,7 @@ export class CafeScene extends Phaser.Scene {
     }
     art(this, `cafe_room${r + 1}`, W / 2, 640, W, 960, true);
 
-    backButton(this, () => this.scene.start('Menu'));
+    backButton(this, () => this.scene.start('Map'));
     txt(this, W / 2, 70, t('chapter_' + CHAPTERS[roomChapter(save.tasksDone, r)].key), 34);
     pill(this, W - 24, 64, 'star', () => save.stars, 130);
     txt(this, W / 2, 128, t('comfort', { n: comfort(save.cafe, save.cafeTier), r: tipsRate(save.cafe, save.cafeTier) }), 24);

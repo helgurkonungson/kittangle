@@ -16,17 +16,22 @@ export interface CheckResult {
   free: boolean;
   /** empty cells in front of the head before the edge or the obstacle */
   steps: number;
-  /** EMPTY if free, BOX or id of the blocking cat */
+  /** EMPTY if free, BOX or id of the blocking cat (the mother when `mother` is set) */
   blocker: number;
+  /** the way out is clear, but this kitten's mother is still on the board */
+  mother?: boolean;
 }
 
-/** Mutable play state. Removing a cat only frees cells, so it never blocks anyone. */
+/**
+ * Mutable play state. Removing a cat only frees cells (and lets kittens follow their mother),
+ * so it never blocks anyone: the greedy solver is exact.
+ */
 export class Board {
   readonly w: number;
   readonly h: number;
   readonly grid: Int32Array;
   readonly cats = new Map<number, Cat>();
-  /** sleepy cats that cannot leave yet: they wake when a cat next to them leaves */
+  /** sleepy cats: a tap wakes them (GDD 2.0 §7), only then can they leave */
   asleep = new Set<number>();
 
   constructor(level: Level) {
@@ -63,23 +68,23 @@ export class Board {
       x += DX[d];
       y += DY[d];
     }
+    if (c.mother !== undefined && this.cats.has(c.mother)) return { free: false, steps, blocker: c.mother, mother: true };
     return { free: true, steps, blocker: EMPTY };
   }
 
-  /** Removes a cat; returns the sleepy cats that woke up because it was their neighbour. */
+  /** Wakes a sleepy cat; false if it was awake. */
+  wake(id: number) {
+    return this.asleep.delete(id);
+  }
+
+  /** Removes a cat; returns the kittens whose mother it was (they may follow now). */
   remove(id: number): number[] {
     const c = this.cats.get(id);
     if (!c) return [];
     for (const p of c.cells) this.grid[p.y * this.w + p.x] = EMPTY;
     this.cats.delete(id);
     this.asleep.delete(id);
-    const woke: number[] = [];
-    for (const p of c.cells)
-      for (let d = 0; d < 4; d++) {
-        const o = this.at(p.x + DX[d], p.y + DY[d]);
-        if (o >= 0 && this.asleep.delete(o)) woke.push(o);
-      }
-    return woke;
+    return [...this.cats.values()].filter((k) => k.mother === id).map((k) => k.id);
   }
 
   /** Cats sharing a cell edge with this one. */
@@ -93,7 +98,7 @@ export class Board {
     return [...out];
   }
 
-  /** Cats that can leave right now: clear way out and awake. */
+  /** Cats that can leave right now: clear way out, awake, no mother waiting on the board. */
   freeCats(): number[] {
     return [...this.cats.keys()].filter((id) => !this.asleep.has(id) && this.check(id).free);
   }

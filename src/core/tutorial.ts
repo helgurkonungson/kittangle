@@ -1,17 +1,13 @@
 /**
- * Mini-tutorial: every mechanic is explained once, when it first appears, one lesson per level
- * (2026-11-16 playtest). Core rules first (levels 1–10), café and other activities on first visit.
- * Boosters and the sleepy cat are hands-on: after the card the player must do it (free, the rest of
- * the screen is locked). Pure logic; scenes show the cards (game/tips.ts) and mark them seen.
+ * Mini-tutorial (GDD 2.0 §4): level 1 teaches the tap with an animated hand, no cards before the first
+ * move. Every special rule gets one short, skippable tip the first time it shows up; the board is never
+ * locked. Café, collection, daily and event get a card on their first visit. Pure logic.
  */
 import { LESSON } from './levels';
 
 export type TipKey =
-  | 'fewFree' | 'hint' | 'feed' | 'hard' | 'sleepy' | 'boxes' | 'streak' | 'daily'
+  | 'blocked' | 'hint' | 'scratchy' | 'sleepy' | 'kitten' | 'boxes' | 'hard' | 'daily'
   | 'combo' | 'cafe' | 'collection' | 'event';
-
-/** Tips that end in a forced, free action. */
-export const HANDS_ON: readonly TipKey[] = ['hint', 'sleepy', 'feed'];
 
 export interface LevelCtx {
   mode: 'level' | 'daily';
@@ -19,24 +15,25 @@ export interface LevelCtx {
   hard: boolean;
   sleepy: boolean;
   boxes: boolean;
-  winStreak: number;
+  scratchy: boolean;
+  kittens: boolean;
 }
 
-/** The daily puzzle opens after level 5 (it may contain sleepy cats, taught on level 5). */
-export const DAILY_FROM_LEVEL = LESSON.sleepy + 1;
+/** The daily puzzle and the map extras open after the first five levels. */
+export const DAILY_FROM_LEVEL = 6;
 
 /** The tip to show at level start (at most one), skipping the ones already seen. */
 export function levelTips(c: LevelCtx, seen: readonly string[]): TipKey[] {
   const out: TipKey[] = [];
   if (c.mode === 'daily') out.push('daily');
-  else {
-    if (c.n >= LESSON.fewFree) out.push('fewFree');
-    if (c.n >= LESSON.hint) out.push('hint');
-  }
+  if (c.scratchy) out.push('scratchy');
+  if (c.kittens) out.push('kitten');
   if (c.sleepy) out.push('sleepy');
-  if (c.mode === 'level' && c.n >= LESSON.feed) out.push('feed');
   if (c.boxes) out.push('boxes');
   if (c.hard) out.push('hard');
-  if (c.mode === 'level' && c.winStreak >= 2) out.push('streak');
+  if (c.mode === 'level' && c.n >= LESSON.hint) out.push('hint');
   return out.filter((k) => !seen.includes(k)).slice(0, 1);
 }
+
+/** Paws for a finished level (GDD §5.3): 3 without blocked attempts, 2 with one or two, else 1. */
+export const pawsFor = (blocked: number) => (blocked === 0 ? 3 : blocked <= 2 ? 2 : 1);

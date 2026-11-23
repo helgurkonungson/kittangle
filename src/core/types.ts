@@ -13,7 +13,10 @@ export interface Cat {
   /** cells[0] is the head, last is the tail */
   cells: Cell[];
   breed: number;
+  /** asleep at the start: the first tap wakes it, the next valid tap moves it */
   sleepy?: boolean;
+  /** kitten: id of its mother; it can leave only after the mother has left the board */
+  mother?: number;
 }
 
 export interface Level {

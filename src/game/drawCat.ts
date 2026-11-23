@@ -4,7 +4,8 @@ import { BREEDS } from '../core/content';
 export type Mood = 'calm' | 'happy' | 'angry' | 'sleep';
 type P = { x: number; y: number };
 
-const OUTLINE = 0x4a3328; // cocoa, same as UI ink and the art bible
+const OUTLINE = 0x39243f; // deep plum ink (GDD 2.0 Neon Candy palette)
+const INK = OUTLINE;
 
 /** Mix two RGB colors. */
 export function mix(a: number, b: number, t: number) {
@@ -133,6 +134,7 @@ export function drawCat(
   }
   // nose
   g.fillStyle(0xf08a9a, 1).fillCircle(h.x + fx * R * 0.6, h.y + fy * R * 0.6, R * 0.1);
+  if (b.special) drawAccessory(g, 'neckerchief', h, R, fx, fy, sx, sy);
   if (acc) drawAccessory(g, acc, h, R, fx, fy, sx, sy);
 }
 
@@ -155,6 +157,14 @@ function drawAccessory(g: Phaser.GameObjects.Graphics, acc: string, h: P, R: num
     const cy = h.y - fy * R * 0.95;
     g.lineStyle(R * 0.38, 0x7fcfb8, 1).lineBetween(cx - sx * R * 0.8, cy - sy * R * 0.8, cx + sx * R * 0.8, cy + sy * R * 0.8);
     g.lineStyle(R * 0.12, 0xffffff, 1).lineBetween(cx - sx * R * 0.2, cy - sy * R * 0.2, cx + sx * R * 0.2, cy + sy * R * 0.2);
+  } else if (acc === 'neckerchief') {
+    // Scratchy's coral neckerchief: a band behind the head with a small knot
+    const cx = h.x - fx * R * 0.95;
+    const cy = h.y - fy * R * 0.95;
+    g.lineStyle(R * 0.42, INK, 1).lineBetween(cx - sx * R * 0.85, cy - sy * R * 0.85, cx + sx * R * 0.85, cy + sy * R * 0.85);
+    g.lineStyle(R * 0.3, 0xff654d, 1).lineBetween(cx - sx * R * 0.78, cy - sy * R * 0.78, cx + sx * R * 0.78, cy + sy * R * 0.78);
+    g.fillStyle(0xff654d, 1).fillTriangle(cx, cy, cx - fx * R * 0.55 + sx * R * 0.25, cy - fy * R * 0.55 + sy * R * 0.25,
+      cx - fx * R * 0.55 - sx * R * 0.25, cy - fy * R * 0.55 - sy * R * 0.25);
   } else if (acc === 'snow_crown') {
     g.fillStyle(0xa8dcf5, 1);
     for (const s of [-1, 0, 1]) {

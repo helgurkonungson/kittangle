@@ -6,7 +6,7 @@ import { PreloadScene } from './game/art';
 import { CollectionScene } from './game/CollectionScene';
 import { EventScene } from './game/EventScene';
 import { LevelScene } from './game/LevelScene';
-import { MenuScene } from './game/MenuScene';
+import { MapScene } from './game/MapScene';
 import { initState } from './game/state';
 import { C, H, W } from './game/ui';
 
@@ -24,6 +24,6 @@ Promise.all([initState(), fonts]).then(() => {
     height: H,
     backgroundColor: C.bg,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: [PreloadScene, MenuScene, LevelScene, CafeScene, CollectionScene, EventScene],
+    scene: [PreloadScene, MapScene, LevelScene, CafeScene, CollectionScene, EventScene],
   });
 });
