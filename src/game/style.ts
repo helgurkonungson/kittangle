@@ -190,7 +190,7 @@ export function pawBar(sc: Phaser.Scene, x: number, y: number, w: number, value:
   const coin = sc.add.graphics();
   coin.fillStyle(C.inkN, 1).fillCircle(-w / 2, 0, 27);
   coin.fillStyle(S.yellow, 1).fillCircle(-w / 2, -1, 23);
-  c.add([coin, icon(sc, 'paw', -w / 2, -1, 34), title(sc, w * 0.12, 0, `${value} / ${max}`, 22)]);
+  c.add([coin, icon(sc, 'paw', -w / 2, -1, 34), title(sc, 14, 0, `${value} / ${max}`, 22)]);
   return c;
 }
 

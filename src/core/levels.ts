@@ -177,8 +177,21 @@ function applySpecials(lv: Level, sp: Specials, seed: number) {
     return c;
   };
   // Scratchy: a cat that is blocked at the start, so the player is likely to try him early
+  // (playtest 2026-11-24) with room in front of his nose: never pressed against a cat, so his crawl shows at once
+  const room = (c: Cat) => {
+    const b = new Board(lv);
+    const d = headDir(c);
+    let { x, y } = c.cells[0];
+    let gap = 0;
+    for (x += DX[d], y += DY[d]; b.inside(x, y) && b.at(x, y) === EMPTY; x += DX[d], y += DY[d]) gap++;
+    const h = c.cells[0];
+    const open = [0, 1, 2, 3].filter((k) => b.inside(h.x + DX[k], h.y + DY[k]) && b.at(h.x + DX[k], h.y + DY[k]) === EMPTY).length;
+    return { gap, open, edge: !b.inside(x, y) };
+  };
   for (let i = 0; i < sp.scratchy; i++) {
-    const c = pick((c) => (wave.get(c.id) ?? 0) >= 1 && c.cells.length >= 3) ?? pick((c) => (wave.get(c.id) ?? 0) >= 1);
+    const c = pick((c) => { const m = room(c); return (wave.get(c.id) ?? 0) >= 1 && c.cells.length >= 3 && m.gap >= 2 && !m.edge && m.open >= 2; })
+      ?? pick((c) => (wave.get(c.id) ?? 0) >= 1 && room(c).gap >= 1 && !room(c).edge)
+      ?? pick((c) => (wave.get(c.id) ?? 0) >= 1 && c.cells.length >= 3) ?? pick((c) => (wave.get(c.id) ?? 0) >= 1);
     if (c) c.breed = SCRATCHY;
   }
   // Moony hides right in front of another cat: that cat looks free, bumps into him and reveals him

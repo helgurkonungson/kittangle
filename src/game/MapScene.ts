@@ -46,7 +46,7 @@ export class MapScene extends Phaser.Scene {
     playMusic('music_menu');
 
     const done = Math.max(0, Math.min(CHAPTER_LEN, save.level - first));
-    const name = first <= CAMPAIGN_LEVELS ? t('chapter_' + chapterKey(ch)) : t('endless');
+    const name = first <= CAMPAIGN_LEVELS ? t('chapterN', { n: ch + 1, name: t('chapter_' + chapterKey(ch)) }) : t('endless');
     ribbon(this, land ? W / 2 : 322, 62, land ? 560 : 400, name.toUpperCase(), 'paw', name.length > 16 && !land ? 26 : 30);
     pawBar(this, W / 2 + 20, 140, 230, done, CHAPTER_LEN);
     roundBtn(this, 56, 56, 76, S.purpleBtn, S.purpleLip, 'back', () => this.scene.start('Title'));
@@ -150,7 +150,12 @@ export class MapScene extends Phaser.Scene {
       const label = state === 'current' ? String(n).padStart(2, '0') : String(n);
       const ty = state === 'current' ? 0 : -9;
       c.add(title(this, 0, ty, label, n > 99 ? 24 : state === 'current' ? 34 : 28).setStroke(state === 'locked' ? '#7a5aa6' : '#39243f', 6));
-      if (state === 'done') c.add(icon(this, 'paw', 0, r * 0.48, r * 0.6).setAlpha((save.best[n] ?? 1) === 3 ? 1 : 0.7));
+      if (state === 'done') {
+        // paws earned (1–3): a level with fewer than 3 is worth replaying
+        const got = save.best[n] ?? 0;
+        c.add(this.add.graphics().fillStyle(C.inkN, 0.55).fillRoundedRect(-r * 0.9, r * 0.22, r * 1.8, r * 0.56, r * 0.28));
+        for (let k = 0; k < 3; k++) c.add(icon(this, 'paw', (k - 1) * r * 0.58, r * 0.5, r * 0.5).setAlpha(k < got ? 1 : 0.3));
+      }
       if (state === 'locked') c.add(icon(this, 'lock', 0, r * 0.5, r * 0.55));
       // badges sit outside the circle so they never cover the number
       if (isMilestone(n)) c.add(icon(this, 'chest', r * 1.12, -r * 1.02, 44));

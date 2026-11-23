@@ -42,8 +42,8 @@ export class TitleScene extends Phaser.Scene {
   private cats(land: boolean) {
     // positions are tuned to the two room pictures (screen units after the cover fit)
     const P = land
-      ? { white: [600, 338, 175], tree: [210, 214, 112], sofa: [668, 508, 128], rug: [560, 640, 240] }
-      : { white: [420, 552, 122], tree: [86, 500, 92], sofa: [462, 818, 118], rug: [250, 928, 205] };
+      ? { white: [600, 338, 175], tree: [210, 205, 112], sofa: [668, 508, 128], rug: [560, 640, 240] }
+      : { white: [420, 552, 122], tree: [86, 492, 92], sofa: [462, 818, 118], rug: [250, 928, 205] };
 
     // white cat on the windowsill, seen from behind; the tail sways from its base
     const [wx, wy, wh] = P.white;
@@ -83,11 +83,19 @@ export class TitleScene extends Phaser.Scene {
       const yarn = this.piece('menu_yarn', sx - gw * 0.2, sy - gw * 0.42, gw * 0.3, 0.5, 0.5);
       const fish = this.piece('menu_fish', gx + gw * 0.55, gy + gw * 0.12, gw * 0.3, 0.5, 0.5);
       fish?.setAngle(-14);
+      const yx = yarn?.x ?? 0;
+      const yy = yarn?.y ?? 0;
       const bat = (hard = false) => {
-        this.tweens.add({ targets: paw, angle: { from: -25, to: 18 }, duration: hard ? 140 : 220, yoyo: true, ease: 'Quad.Out' });
-        if (yarn) this.tweens.add({
-          targets: yarn, y: yarn.y - (hard ? 60 : 30), angle: yarn.angle + (hard ? 200 : 90), duration: hard ? 260 : 300,
-          delay: 120, yoyo: true, ease: 'Quad.Out',
+        // every bat starts from the rest pose, so fast taps never walk the ball away
+        this.tweens.killTweensOf(paw);
+        paw.setAngle(-25);
+        this.tweens.add({ targets: paw, angle: 18, duration: hard ? 140 : 220, yoyo: true, ease: 'Quad.Out' });
+        if (!yarn) return;
+        this.tweens.killTweensOf(yarn);
+        yarn.setPosition(yx, yy);
+        this.tweens.add({
+          targets: yarn, y: yy - (hard ? 60 : 30), angle: yarn.angle + (hard ? 200 : 90), duration: hard ? 260 : 300,
+          delay: 120, yoyo: true, ease: 'Quad.Out', onComplete: () => yarn.setPosition(yx, yy),
         });
       };
       this.time.addEvent({ delay: 1900, loop: true, callback: () => bat() });

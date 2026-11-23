@@ -39,7 +39,7 @@ export class CafeScene extends Phaser.Scene {
   }
 
   /** decor images drawn this time, by slot (cats sit on them) */
-  private placed = new Map<string, { im: Phaser.GameObjects.Image; v: number }>();
+  private placed = new Map<string, { im: Phaser.GameObjects.Image; v: number; k: number }>();
 
   create() {
     this.placed = new Map();
@@ -87,7 +87,8 @@ export class CafeScene extends Phaser.Scene {
       const rect = placeOf(r, key, v);
       if (v >= 0) {
         const im = art(this, `decor_r${r + 1}_${key}_${v}`, rect.x, rect.y, rect.w, rect.h);
-        if (im) this.placed.set(key, { im, v });
+        // the full scale is kept: a just-renovated piece pops in from 60 %, cats must not sit at that size
+        if (im) this.placed.set(key, { im, v, k: im.scale });
         if (im && i === this.upgraded) this.celebrate(im);
         if (im && rect.anchor === 'floor') {
           im.setOrigin(0.5, 1).setY(rect.y + rect.h / 2);
@@ -108,9 +109,9 @@ export class CafeScene extends Phaser.Scene {
         const hr = rect;
         const hit = this.add.zone(hr.x, hr.y, hr.w, hr.h).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this.pickVariant(i));
-        // renovation task on a placed piece: it gently pulses until upgraded
+        // renovation task on a placed piece: a slow glow (no scaling: cats sit on it)
         if (im && task?.kind === 'decor' && task.slot === i && CHAPTERS[progress(save.tasksDone).chapter]?.room === r) {
-          this.tweens.add({ targets: im, scale: im.scale * 1.06, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+          this.tweens.add({ targets: im, alpha: 0.72, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
         }
       } else if (task?.kind === 'decor' && task.slot === i && CHAPTERS[progress(save.tasksDone).chapter]?.room === r) {
         // only the slot of the current task is shown: a pulsing "build here" spot
@@ -252,7 +253,7 @@ export class CafeScene extends Phaser.Scene {
 
     const finish = () => {
       if (!res.chapterDone) return this.scene.restart({ room: ch.room, upgraded });
-      const lines = [t('chapterDone')];
+      const lines = [t('roomDone', { name: t('chapter_' + ch.key) })];
       const chest = chapterChest(res.chapter);
       save.fish += chest.fish;
       const pawLines = grantPaws(chest.paws);
@@ -286,9 +287,8 @@ export class CafeScene extends Phaser.Scene {
     const close = modal(this, t('slot_' + CAFE_SLOTS[slot]), [t('chooseVariant'), t('visitorHint')],
       CAFE_VARIANTS[r].map((color, v) => ({
         // later looks open with the cozy / deluxe renovation chapters
-        label: v > save.cafeTier[r][slot]
-          ? `🔒 ${t(v === 1 ? 'variantCozy' : 'variantDeluxe')}`
-          : `${save.cafe[r][slot] === v ? '✓ ' : ''}${TAG_ICON[tagOf(slot, v)]} ${t('tag_' + tagOf(slot, v))}`,
+        // same name whether open or locked: look name + what guests like about it
+        label: `${v > save.cafeTier[r][slot] ? '🔒 ' : save.cafe[r][slot] === v ? '✓ ' : ''}${t(['variantBasic', 'variantCozy', 'variantDeluxe'][v])} · ${TAG_ICON[tagOf(slot, v)]} ${t('tag_' + tagOf(slot, v))}`,
         color,
         disabled: v > save.cafeTier[r][slot],
         onClick: () => {
@@ -346,10 +346,12 @@ export class CafeScene extends Phaser.Scene {
     for (const key of CAFE_SLOTS) {
       const p = this.placed.get(key);
       if (!p) continue;
-      const { im, v } = p;
-      const left = im.x - im.displayWidth * im.originX;
-      const top = im.y - im.displayHeight * im.originY;
-      for (const st of SEATS[r][key][v] ?? []) seats.push({ x: left + st.fx * im.displayWidth, y: top + st.fy * im.displayHeight, s: st.s, floor: false });
+      const { im, v, k } = p;
+      const w = im.width * k;
+      const h = im.height * k;
+      const left = im.x - w * im.originX;
+      const top = im.y - h * im.originY;
+      for (const st of SEATS[r][key][v] ?? []) seats.push({ x: left + st.fx * w, y: top + st.fy * h, s: st.s, floor: false });
     }
     const floor = save.visit.visitor >= 0 ? [{ x: 80, y: 1020 }] : [{ x: 80, y: 1020 }, { x: 196, y: 1032 }, { x: 312, y: 1020 }];
     for (const f of floor) seats.push({ ...f, s: 118, floor: true });
