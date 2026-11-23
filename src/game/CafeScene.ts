@@ -12,7 +12,7 @@ import { rewarded, rewardedReady } from './ads';
 import { addFish, grantPaws, persist, platform, save, unlockBreed } from './state';
 import { button, C, dialog, modal, pill, toast, txt, W, backButton, panel } from './ui';
 
-import { CAFE_UI, FLOOR_SLOTS, type Rect, SLOT_HIT, SLOT_RECT } from './cafeLayout';
+import { CAFE_UI, type Rect, placeOf } from './cafeLayout';
 
 const WALL = [0xf6dfc6, 0xe9e0ef]; // hall: peach, attic: dusty lavender (art bible color script)
 const FLOOR = [0xe3c49f, 0xd8b98e]; // hall: honey wood, attic: pine
@@ -73,16 +73,16 @@ export class CafeScene extends Phaser.Scene {
 
     const task = nextTask(save.tasksDone);
     CAFE_SLOTS.forEach((key, i) => {
-      const rect = SLOT_RECT[r][key];
       const v = save.cafe[r][i];
+      const rect = placeOf(r, key, v);
       if (v >= 0) {
-        const im = art(this, `decor_r${r + 1}_${key}_${v}`, rect.x, rect.y, rect.w * 1.15, rect.h * 1.15);
+        const im = art(this, `decor_r${r + 1}_${key}_${v}`, rect.x, rect.y, rect.w, rect.h);
         if (im && i === this.upgraded) this.celebrate(im);
-        if (im && FLOOR_SLOTS[r].includes(key)) {
+        if (im && rect.anchor === 'floor') {
           im.setOrigin(0.5, 1).setY(rect.y + rect.h / 2);
           this.add.ellipse(rect.x, rect.y + rect.h / 2 - 4, im.displayWidth * 0.8, 18, C.inkN, 0.12);
           this.children.bringToTop(im);
-        }
+        } else if (im && rect.anchor === 'ceiling') im.setOrigin(0.5, 0).setY(rect.y - rect.h / 2);
         if (!im) {
           this.drawItem(this.add.graphics(), key, rect, CAFE_VARIANTS[r][v], r);
         }
@@ -90,7 +90,7 @@ export class CafeScene extends Phaser.Scene {
         const top = im ? im.y - im.displayHeight * im.originY : rect.y - rect.h / 2;
         const right = im ? im.x + im.displayWidth * 0.4 : rect.x + rect.w / 2 - 6;
         txt(this, right, top + 14, TAG_ICON[tagOf(i, v)], 26);
-        const hr = SLOT_HIT[r][key];
+        const hr = rect;
         const hit = this.add.zone(hr.x, hr.y, hr.w, hr.h).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this.pickVariant(i));
         // renovation task on a placed piece: it gently pulses until upgraded
@@ -114,7 +114,7 @@ export class CafeScene extends Phaser.Scene {
         }
         ph.add([pg, txt(this, 0, 0, '+', 56, '#ff9e5e').setStroke(C.ink, 6)]);
         this.tweens.add({ targets: ph, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-        const hz = SLOT_HIT[r][key];
+        const hz = rect;
         const hit = this.add.zone(hz.x, hz.y, hz.w, hz.h).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this.perform());
       }
@@ -293,8 +293,9 @@ export class CafeScene extends Phaser.Scene {
     const b = save.visit.visitor;
     if (b < 0) return;
     const vis = VISITORS.find((v) => v.breed === b)!;
-    sittingCat(this, b, 440, 720, 120);
-    const bell = txt(this, 470, 660, '🔔', 40);
+    const vz0 = CAFE_UI.visitor;
+    sittingCat(this, b, vz0.x, vz0.y, 120);
+    const bell = txt(this, vz0.x + 30, vz0.y - 60, '🔔', 40);
     this.tweens.add({ targets: bell, angle: 15, duration: 300, yoyo: true, repeat: -1 });
     const vz = CAFE_UI.visitor;
     const zone = this.add.zone(vz.x, vz.y, vz.w, vz.h).setInteractive({ useHandCursor: true });

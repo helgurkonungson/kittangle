@@ -17,7 +17,12 @@ export async function initState() {
   platform.onMute(setForcedMute);
   await platform.init();
   const q = new URLSearchParams(location.search);
-  if (q.has('reset')) clearLocalSave();
+  if (q.has('reset')) {
+    clearLocalSave();
+    // drop the flag so a later reload keeps the new progress
+    q.delete('reset');
+    history.replaceState(null, '', location.pathname + (q.size ? '?' + q : '') + location.hash);
+  }
   save = migrate(await platform.load());
   // dev helpers: ?level=37 jumps, ?fish=999 adds fish, ?lang=en
   if (q.get('level')) save.level = Math.max(1, Number(q.get('level')) || 1);

@@ -2,50 +2,48 @@ import { CAFE_SLOTS } from '../core/content';
 
 /**
  * Café screen layout (pure data, no Phaser) so tests can check that tappable things never overlap.
- * Coordinates are in the 720×1280 game space. Room art covers y 160..1120; the floor starts at
- * y≈870 in the hall art and y≈810 in the attic.
+ * Coordinates are in the 720×1280 game space; the room art fills it 1:1. Hall: ceiling beam ends at
+ * y≈100, wall to y≈525, wainscot to y≈690, then floor. Attic: wall triangle under the roof slopes
+ * (apex ≈ 240,115; right slope ≈ y = 115 + 0.74·(x − 240)), baseboard ≈ 630..680, then floor.
  */
 export type Rect = { x: number; y: number; w: number; h: number };
 export type Slot = (typeof CAFE_SLOTS)[number];
+/** floor: art stands on the bottom edge; ceiling: hangs from the top edge; wall: centered */
+export type Anchor = 'floor' | 'ceiling' | 'wall';
+export type Place = Rect & { anchor: Anchor };
 
-/** Where each decor piece is drawn (art is fitted into the rect). */
-export const SLOT_RECT: Record<Slot, Rect>[] = [
-  { // hall: classic front room
-    window: { x: 360, y: 440, w: 280, h: 230 },
-    lamp: { x: 95, y: 745, w: 140, h: 390 },
-    post: { x: 630, y: 790, w: 140, h: 300 },
-    sofa: { x: 245, y: 870, w: 360, h: 200 },
-    counter: { x: 480, y: 935, w: 300, h: 180 },
+const P = (x: number, y: number, w: number, h: number, anchor: Anchor): Place => ({ x, y, w, h, anchor });
+/** box from its bottom edge (things standing on the floor) */
+const onFloor = (x: number, bottom: number, w: number, h: number) => P(x, bottom - h / 2, w, h, 'floor');
+/** box from its top edge (things hanging from the ceiling) */
+const hanging = (x: number, top: number, w: number, h: number) => P(x, top + h / 2, w, h, 'ceiling');
+
+/**
+ * Where each decor piece goes, per room and slot; one entry per variant when variants differ in kind
+ * (a ceiling pendant and a floor lamp cannot share a spot). The art is fitted into the box.
+ */
+export const PLACES: Record<Slot, Place[]>[] = [
+  { // hall
+    window: [P(500, 385, 270, 270, 'wall')],
+    lamp: [hanging(215, 100, 200, 230), onFloor(78, 790, 130, 340), onFloor(78, 790, 130, 200)],
+    post: [onFloor(620, 850, 190, 330)],
+    sofa: [onFloor(310, 900, 330, 230)],
+    counter: [onFloor(520, 1090, 330, 190)],
   },
-  { // attic: dormer on the right, pendant lantern under the beam, wall shelves, armchair, bar
-    window: { x: 500, y: 430, w: 220, h: 230 },
-    lamp: { x: 230, y: 360, w: 100, h: 230 },
-    post: { x: 150, y: 580, w: 170, h: 190 },
-    sofa: { x: 530, y: 860, w: 280, h: 210 },
-    counter: { x: 290, y: 930, w: 340, h: 180 },
+  { // attic
+    window: [P(220, 430, 240, 240, 'wall')],
+    lamp: [hanging(450, 290, 160, 200), hanging(450, 285, 200, 120), hanging(450, 290, 160, 200)],
+    post: [P(630, 520, 150, 200, 'wall')],
+    sofa: [onFloor(230, 900, 320, 230)],
+    counter: [onFloor(520, 1090, 330, 190)],
   },
 ];
 
-/** Pieces that stand on the floor: their art is bottom-aligned to the slot so they never float. */
-export const FLOOR_SLOTS: Slot[][] = [['lamp', 'post', 'sofa', 'counter'], ['sofa', 'counter']];
-
-/** Tap areas of the decor: smaller than the drawn art where pieces overlap, never overlapping each other. */
-export const SLOT_HIT: Record<Slot, Rect>[] = [
-  {
-    window: { x: 360, y: 440, w: 280, h: 230 },
-    lamp: { x: 85, y: 660, w: 120, h: 200 }, // shade and upper pole, above the sofa
-    post: { x: 640, y: 800, w: 120, h: 280 },
-    sofa: { x: 240, y: 875, w: 340, h: 190 },
-    counter: { x: 495, y: 935, w: 130, h: 180 }, // front of the counter, right of the sofa
-  },
-  {
-    window: { x: 500, y: 430, w: 220, h: 230 },
-    lamp: { x: 230, y: 360, w: 100, h: 230 },
-    post: { x: 150, y: 580, w: 170, h: 190 },
-    sofa: { x: 540, y: 870, w: 260, h: 190 },
-    counter: { x: 250, y: 930, w: 260, h: 180 },
-  },
-];
+/** Placement of a slot's variant (an empty slot uses the first spot). */
+export function placeOf(room: number, slot: Slot, variant: number): Place {
+  const list = PLACES[room][slot];
+  return list[Math.min(Math.max(variant, 0), list.length - 1)];
+}
 
 const btn = (x: number, y: number, w: number, h: number): Rect => ({ x, y, w, h });
 
@@ -58,7 +56,7 @@ export const CAFE_UI = {
   nextRoom: btn(720 - 96, 215, 168, 64),
   tips: btn(130, 1065, 210, 70),
   taskPanel: btn(360, 1190, 680, 136),
-  visitor: btn(440, 710, 160, 120),
+  visitor: btn(250, 975, 140, 110),
 };
 
 export const overlaps = (a: Rect, b: Rect) =>

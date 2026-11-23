@@ -1,24 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { CAFE_SLOTS } from '../src/core/content';
-import { CAFE_UI, overlaps, SLOT_HIT } from '../src/game/cafeLayout';
+import { CAFE_UI, overlaps, PLACES } from '../src/game/cafeLayout';
 
-/** Tappable areas must never overlap: a tap on one control must not trigger another. */
+/** Every variant combination: tap areas never overlap, never hit screen controls, stay in the picture. */
 describe('café layout', () => {
   const ui = Object.entries(CAFE_UI);
-  SLOT_HIT.forEach((room, r) => {
-    it(`room ${r + 1}: decor tap areas do not overlap each other`, () => {
-      for (let i = 0; i < CAFE_SLOTS.length; i++)
-        for (let j = i + 1; j < CAFE_SLOTS.length; j++)
-          expect(overlaps(room[CAFE_SLOTS[i]], room[CAFE_SLOTS[j]]), `${CAFE_SLOTS[i]} × ${CAFE_SLOTS[j]}`).toBe(false);
+  PLACES.forEach((room, r) => {
+    const all = CAFE_SLOTS.flatMap((s) => room[s].map((p, v) => ({ s, v, p })));
+    it(`room ${r + 1}: pieces of different slots never overlap`, () => {
+      for (const a of all) for (const b of all)
+        if (a.s < b.s) expect(overlaps(a.p, b.p), `${a.s}${a.v} × ${b.s}${b.v}`).toBe(false);
     });
-    it(`room ${r + 1}: decor tap areas do not overlap screen controls`, () => {
-      for (const s of CAFE_SLOTS)
-        for (const [name, rect] of ui) expect(overlaps(room[s], rect), `${s} × ${name}`).toBe(false);
+    it(`room ${r + 1}: pieces do not overlap screen controls`, () => {
+      // the first room has no "previous room" pill
+      for (const a of all) for (const [name, rect] of ui)
+        if (!(r === 0 && name === 'prevRoom')) expect(overlaps(a.p, rect), `${a.s}${a.v} × ${name}`).toBe(false);
     });
-    it(`room ${r + 1}: tap areas stay inside the room picture`, () => {
-      for (const s of CAFE_SLOTS) {
-        const h = room[s];
-        expect(h.x - h.w / 2 >= 0 && h.x + h.w / 2 <= 720 && h.y - h.h / 2 >= 160 && h.y + h.h / 2 <= 1120, s).toBe(true);
+    it(`room ${r + 1}: pieces stay inside the room, windows on the wall, floor pieces on the floor`, () => {
+      for (const { s, v, p } of all) {
+        expect(p.x - p.w / 2 >= 0 && p.x + p.w / 2 <= 720 && p.y - p.h / 2 >= 100 && p.y + p.h / 2 <= 1120, `${s}${v}`).toBe(true);
+        if (s === 'window') expect(p.y + p.h / 2, 'window above the wainscot/baseboard').toBeLessThanOrEqual(r ? 630 : 525);
+        if (p.anchor === 'floor') expect(p.y + p.h / 2, `${s}${v} stands on the floor`).toBeGreaterThanOrEqual(r ? 680 : 690);
+        if (p.anchor === 'ceiling') expect(p.y + p.h / 2, `${s}${v} hangs above the floor`).toBeLessThan(r ? 630 : 525);
       }
     });
   });
