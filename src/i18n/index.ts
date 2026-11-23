@@ -270,6 +270,9 @@ const ru = {
   adDoubleShort: "×2 за рекламу",
   tagline: "Помоги котикам выбраться!",
   myCafe: "Мое кошачье кафе",
+  tip_moony_t: "Это Муни!",
+  tip_moony: "Ночной кот с полумесяцем во лбу. Он невидим, пока в него кто-нибудь не врежется. Врезаться в Муни не ошибка: лапки не теряются.",
+  breed_moony: "Муни",
 };
 
 type Dict = typeof ru;
@@ -546,6 +549,9 @@ const en: Dict = {
   adDoubleShort: "×2 for an ad",
   tagline: "Help the cats slip out!",
   myCafe: "My Cat Café",
+  tip_moony_t: "Meet Moony!",
+  tip_moony: "A night-colored cat with a crescent on his forehead. He stays invisible until another cat bumps into him. Bumping into Moony is not a mistake: no paws lost.",
+  breed_moony: "Moony",
 };
 
 import es from './locales/es.json';

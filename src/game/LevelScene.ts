@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { Board, BOX, headDir } from '../core/board';
+import { Board, BOX, EMPTY, headDir } from '../core/board';
 import {
-  BREEDS, COMBO_BONUS_MAX, COMBO_WINDOW_MS, COST, DAILY_REWARD, DAILY_STREAK_BONUS, FISH_PER_CAT, levelReward, SCRATCHY,
+  BREEDS, COMBO_BONUS_MAX, COMBO_WINDOW_MS, COST, DAILY_REWARD, DAILY_STREAK_BONUS, FISH_PER_CAT, levelReward, MOONY, SCRATCHY,
 } from '../core/content';
 import { CAMPAIGN_LEVELS, chapterKey, chapterOf, dailyNumber, getDaily, getLevel, isMilestone, stepOf, CHAPTER_LEN } from '../core/levels';
 import { prevDate } from '../core/save';
@@ -38,6 +38,8 @@ interface CatView {
   acc?: Phaser.GameObjects.Image;
   /** shared mother–kitten heart */
   mark?: Phaser.GameObjects.Graphics;
+  /** Moony before anyone bumped into him */
+  hidden?: boolean;
 }
 
 /** family colors for mother–kitten pairs (never the only cue: kittens are also smaller) */
@@ -128,7 +130,7 @@ export class LevelScene extends Phaser.Scene {
     for (const cat of this.board.cats.values()) {
       const v: CatView = {
         cat, g: this.add.graphics().setMask(this.mask), awake: !cat.sleepy, busy: false,
-        mood: cat.sleepy ? 'sleep' : 'calm', hint: false,
+        mood: cat.sleepy ? 'sleep' : 'calm', hint: false, hidden: cat.breed === MOONY,
       };
       const fam = cat.mother !== undefined ? pairs.indexOf(cat.mother) : pairs.indexOf(cat.id);
       if (fam >= 0) v.mark = this.heart(FAMILY[fam % FAMILY.length]).setMask(this.mask);
@@ -158,7 +160,7 @@ export class LevelScene extends Phaser.Scene {
       const tips = levelTips({
         mode: d.mode, n: d.mode === 'level' ? d.n : 0, hard: !!this.level.hard,
         sleepy: this.level.cats.some((c) => c.sleepy), boxes: this.level.boxes.length > 0,
-        scratchy: this.level.cats.some((c) => c.breed === SCRATCHY), kittens: this.level.cats.some((c) => c.mother !== undefined),
+        scratchy: this.level.cats.some((c) => c.breed === SCRATCHY), moony: this.level.cats.some((c) => c.breed === MOONY), kittens: this.level.cats.some((c) => c.mother !== undefined),
       }, save.tipsSeen);
       if (tips.length) this.time.delayedCall(250, () => this.showTip(tips[0]));
     }
@@ -224,11 +226,13 @@ export class LevelScene extends Phaser.Scene {
     const accId = save.equipped[v.cat.breed];
     const useArt = has(this, key);
     drawCat(v.g, p, v.cat.breed, size, v.mood, v.hint, useArt ? undefined : accId, useArt);
+    v.g.setVisible(!v.hidden);
+    v.head?.setVisible(!v.hidden);
     if (!useArt) return;
     // generated head looks up; rotate it toward the direction of travel
     const rot = Math.atan2(p[0].y - p[1].y, p[0].x - p[1].x) + Math.PI / 2;
     if (!v.head) v.head = this.add.image(0, 0, key).setMask(this.mask);
-    v.head.setTexture(key).setDisplaySize(size * 1.05, size * 1.05).setPosition(p[0].x + v.g.x, p[0].y + v.g.y).setRotation(rot);
+    v.head.setTexture(key).setDisplaySize(size * 1.05, size * 1.05).setPosition(p[0].x + v.g.x, p[0].y + v.g.y).setRotation(rot).setVisible(!v.hidden);
     const accKey = accId ? `acc_${accId}` : '';
     if (accKey && has(this, accKey)) {
       if (!v.acc) v.acc = this.add.image(0, 0, accKey).setMask(this.mask);
@@ -433,10 +437,11 @@ export class LevelScene extends Phaser.Scene {
     const ix = land ? 0 : -bw / 2 + 75;
     const iy = land ? -bh / 2 + 62 : 5;
     const ic = k === 'scratchy' ? art(this, 'scratchy_warn', ix, iy, land ? 100 : 120, land ? 100 : 120) : null;
-    const iconName = ({ hint: 'hint', sleepy: 'sleep', kitten: 'family', boxes: 'box', hard: 'star', daily: 'daily' } as Record<string, string>)[k];
+    const iconName = ({ hint: 'hint', sleepy: 'sleep', kitten: 'family', moony: 'star', boxes: 'box', hard: 'star', daily: 'daily' } as Record<string, string>)[k];
     const im = ic ?? (iconName ? icon(this, iconName as never, ix, iy, land ? 80 : 96) : null);
-    const tx = txt(this, land ? 0 : 40, land ? 10 : -28, t(`tip_${k}_t`), land ? 26 : 30);
-    const body = txt(this, land ? 0 : 40, land ? 80 : 22, t(`tip_${k}`), 20, C.muted).setWordWrapWidth(land ? bw - 30 : W - 230, true);
+    const tx = txt(this, land ? 0 : 40, land ? -16 : -28, t(`tip_${k}_t`), land ? 26 : 30);
+    const body = txt(this, land ? 0 : 40, land ? 8 : 22, t(`tip_${k}`), 20, C.muted).setWordWrapWidth(land ? bw - 30 : W - 230, true);
+    if (land) body.setOrigin(0.5, 0);
     const close = txt(this, bw / 2 - 28, -bh / 2 + 26, '✕', 28, C.muted);
     c.add([g, ...(im ? [im] : []), tx, body, close]);
     c.setSize(bw, bh).setInteractive();
@@ -508,10 +513,20 @@ export class LevelScene extends Phaser.Scene {
     this.preview = undefined;
     const v = id >= 0 ? this.views.get(id) : undefined;
     if (!v || v.busy) return;
-    const res = this.board.check(id);
+    if (v.hidden) return;
+    let res = this.board.check(id);
     const d = headDir(v.cat);
     const g = this.add.graphics().setDepth(4);
     const h = v.cat.cells[0];
+    // an invisible Moony must not show up in the preview: the path looks clear up to the next visible thing
+    if (!res.free && this.views.get(res.blocker)?.hidden) {
+      let k = res.steps + 1;
+      for (let x = h.x + DX[d] * k, y = h.y + DY[d] * k; this.board.inside(x, y); k++, x += DX[d], y += DY[d]) {
+        const o = this.board.at(x, y);
+        if (o !== EMPTY && !this.views.get(o)?.hidden) break;
+      }
+      res = { free: !this.board.inside(h.x + DX[d] * k, h.y + DY[d] * k), steps: k - 1, blocker: EMPTY };
+    }
     g.fillStyle(res.free ? 0x22d3e6 : 0xff654d, 0.85);
     for (let i = 1; i <= res.steps; i++) {
       const p = this.px({ x: h.x + DX[d] * i, y: h.y + DY[d] * i });
@@ -530,8 +545,10 @@ export class LevelScene extends Phaser.Scene {
     const v = id >= 0 ? this.views.get(id) : undefined;
     if (!v || v.busy) return;
     this.hover(-1, -1);
+    if (v.hidden) return this.reveal(v);
     if (!v.awake) return this.wake(v);
     const res = this.board.check(id);
+    if (!res.free && !res.mother && this.views.get(res.blocker)?.hidden) return this.bonk(v, res.steps, res.blocker);
     if (res.free) {
       this.clearCue();
       this.exit(v, res.steps);
@@ -605,7 +622,10 @@ export class LevelScene extends Phaser.Scene {
     v.acc?.destroy();
     v.mark?.destroy();
     this.views.delete(v.cat.id);
-    if (v.cat.breed !== SCRATCHY) this.rescued.push(v.cat.breed);
+    if (!BREEDS[v.cat.breed].special) this.rescued.push(v.cat.breed);
+    // only Moony is left and nobody found him: he shows himself
+    const left = [...this.views.values()];
+    if (left.length && left.every((x) => x.hidden)) left.forEach((x) => this.reveal(x));
     if (this.views.size === 0 && !this.ended) this.win();
     else if (this.d.mode === 'level' && this.d.n === 1 && this.cue === undefined) this.handCue();
   }
@@ -633,7 +653,10 @@ export class LevelScene extends Phaser.Scene {
     this.taps.push('bonk');
     v.busy = true;
     v.mood = 'angry';
-    this.countBlocked();
+    const ghost = this.views.get(blocker);
+    // bumping into an invisible Moony is not a mistake: he appears instead
+    if (ghost?.hidden) this.time.delayedCall(80 + steps * 30, () => this.reveal(ghost));
+    else this.countBlocked();
     sfx.bonk();
     const len = v.cat.cells.length;
     const tr = this.trajectory(v.cat, steps + 1);
@@ -652,6 +675,32 @@ export class LevelScene extends Phaser.Scene {
       },
     });
     this.showBlocker(v.cat, steps, blocker);
+  }
+
+  /** Moony appears: sparkle puff, fade in, a happy blink. */
+  private reveal(v: CatView) {
+    if (!v.hidden) return;
+    v.hidden = false;
+    v.mood = 'happy';
+    this.redraw(v);
+    const targets = [v.g, v.head].filter(Boolean);
+    for (const o of targets) (o as Phaser.GameObjects.Components.Alpha).setAlpha(0);
+    this.tweens.add({ targets, alpha: 1, duration: 420 });
+    const mid = this.px(v.cat.cells[Math.floor(v.cat.cells.length / 2)]);
+    const fx = art(this, 'moony_reveal', mid.x, mid.y, this.cs * 2.4, this.cs * 2.4);
+    if (fx) this.tweens.add({ targets: fx, alpha: 0, scale: fx.scale * 1.3, delay: 250, duration: 500, onComplete: () => fx.destroy() });
+    else for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const s = this.add.circle(mid.x, mid.y, this.cs * 0.09, i % 2 ? 0xffd84a : 0xb79cf0).setDepth(30);
+      this.tweens.add({ targets: s, x: mid.x + Math.cos(a) * this.cs, y: mid.y + Math.sin(a) * this.cs, alpha: 0, duration: 520, onComplete: () => s.destroy() });
+    }
+    sfx.kitten();
+    platform.track('moony_reveal', { id: this.level.id });
+    this.time.delayedCall(700, () => {
+      if (!v.g.active || v.busy) return;
+      v.mood = 'calm';
+      this.redraw(v);
+    });
   }
 
   /** Kitten tapped while its mother is still on the board: it mews and looks at her. */
@@ -757,7 +806,7 @@ export class LevelScene extends Phaser.Scene {
 
   private useHint() {
     if (this.ended) return;
-    const free = this.board.freeCats().map((id) => this.views.get(id)!).filter((v) => v && !v.busy && !v.hint);
+    const free = this.board.freeCats().map((id) => this.views.get(id)!).filter((v) => v && !v.busy && !v.hint && !v.hidden);
     const sleepers = [...this.views.values()].filter((v) => !v.awake && !v.busy && this.board.check(v.cat.id).free);
     const v = free[0] ?? sleepers[0];
     if (!v) return;

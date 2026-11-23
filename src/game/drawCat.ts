@@ -128,7 +128,8 @@ export function drawCat(
   }
   // nose
   g.fillStyle(0xf08a9a, 1).fillCircle(h.x + fx * R * 0.6, h.y + fy * R * 0.6, R * 0.1);
-  if (b.special) drawAccessory(g, 'neckerchief', h, R, fx, fy, sx, sy);
+  if (b.key === 'scratchy') drawAccessory(g, 'neckerchief', h, R, fx, fy, sx, sy);
+  if (b.key === 'moony') drawAccessory(g, 'crescent', h, R, fx, fy, sx, sy);
   if (acc) drawAccessory(g, acc, h, R, fx, fy, sx, sy);
 }
 
@@ -151,6 +152,12 @@ function drawAccessory(g: Phaser.GameObjects.Graphics, acc: string, h: P, R: num
     const cy = h.y - fy * R * 0.95;
     g.lineStyle(R * 0.38, 0x7fcfb8, 1).lineBetween(cx - sx * R * 0.8, cy - sy * R * 0.8, cx + sx * R * 0.8, cy + sy * R * 0.8);
     g.lineStyle(R * 0.12, 0xffffff, 1).lineBetween(cx - sx * R * 0.2, cy - sy * R * 0.2, cx + sx * R * 0.2, cy + sy * R * 0.2);
+  } else if (acc === 'crescent') {
+    // Moony's gold crescent on the forehead (toward the direction of travel)
+    const cx = h.x + fx * R * 0.35;
+    const cy = h.y + fy * R * 0.35;
+    g.fillStyle(0xffd84a, 1).fillCircle(cx, cy, R * 0.3);
+    g.fillStyle(0x2a2858, 1).fillCircle(cx + sx * R * 0.12 + fx * R * 0.05, cy + sy * R * 0.12 + fy * R * 0.05, R * 0.26);
   } else if (acc === 'neckerchief') {
     // Scratchy's coral neckerchief: a band behind the head with a small knot
     const cx = h.x - fx * R * 0.95;

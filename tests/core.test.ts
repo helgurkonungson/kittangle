@@ -386,3 +386,17 @@ describe('Scratchy crawls (2026-11-23)', () => {
     expect(moved).toBeGreaterThan(20);
   }, 120000);
 });
+
+describe('Moony (2026-11-23)', () => {
+  it('his lesson level hides him right in front of another cat; levels stay solvable', async () => {
+    const { getLevel, LESSON } = await import('../src/core/levels');
+    const { MOONY } = await import('../src/core/content');
+    const lv = getLevel(LESSON.moony);
+    const m = lv.cats.filter((c) => c.breed === MOONY);
+    expect(m.length).toBe(1);
+    const b = new Board(lv);
+    expect(lv.cats.some((c) => c.id !== m[0].id && b.check(c.id).blocker === m[0].id)).toBe(true);
+    for (let n = 1; n < LESSON.moony; n++) expect(getLevel(n).cats.some((c) => c.breed === MOONY), `level ${n}`).toBe(false);
+    for (let n = LESSON.moony; n <= 60; n++) expect(solve(getLevel(n)).solvable, `level ${n}`).toBe(true);
+  }, 120000);
+});

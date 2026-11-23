@@ -15,7 +15,7 @@ import { challenge, challengeOffered, markChallengeOffered } from './share';
 import { fmtTime } from '../core/share';
 
 const LESSON_AT = new Map<number, IconName>([
-  [LESSON.scratchy, 'scratchy'], [LESSON.sleepy, 'sleep'], [LESSON.kitten, 'family'], [LESSON.boxes, 'box'],
+  [LESSON.scratchy, 'scratchy'], [LESSON.sleepy, 'sleep'], [LESSON.kitten, 'family'], [LESSON.moony, 'star'], [LESSON.boxes, 'box'],
 ]);
 
 /**

@@ -1,7 +1,7 @@
 import { GenParams, generateOnce } from './generator';
 import { metrics, solve } from './solver';
 import { hashStr, mulberry32 } from './rng';
-import { SCRATCHY } from './content';
+import { MOONY, SCRATCHY } from './content';
 import { Board, EMPTY, headDir } from './board';
 import { Cat, Cell, DX, DY, Level } from './types';
 
@@ -63,7 +63,7 @@ export const isHard = (n: number) => n > 5 && n % 10 === 0;
 const isRest = (n: number) => n > 10 && n % 10 === 1;
 
 /** Where each special rule is taught: one safe demo level, practice, combinations later (GDD §7). */
-export const LESSON = { blocked: 3, hint: 7, scratchy: 14, sleepy: 21, kitten: 26, boxes: 41 } as const;
+export const LESSON = { blocked: 3, hint: 7, scratchy: 14, sleepy: 21, kitten: 26, moony: 34, boxes: 41 } as const;
 
 /**
  * Level where each common cat variant first appears (index = breed): the home set (0–3) is complete
@@ -89,6 +89,8 @@ export interface Specials {
   sleepy: number;
   kittens: number;
   boxes: number;
+  /** Moony: invisible until a cat bumps into him */
+  moony?: number;
 }
 
 export function specialsFor(n: number): Specials {
@@ -97,6 +99,7 @@ export function specialsFor(n: number): Specials {
   if (n === LESSON.sleepy) return { ...s, sleepy: 1 };
   if (n === LESSON.kitten) return { ...s, kittens: 1 };
   if (n === LESSON.boxes) return { ...s, boxes: 2 };
+  if (n === LESSON.moony) return { ...s, moony: 1 };
   // practice right after each lesson, combinations later; never two new rules at once
   if (n > LESSON.scratchy && n % 3 === 2) s.scratchy = 1;
   if (n > LESSON.sleepy) s.sleepy = n < LESSON.kitten ? 2 : n % 2 ? 1 + (n % 3) : 0;
@@ -104,6 +107,8 @@ export function specialsFor(n: number): Specials {
   if (n > LESSON.boxes) s.boxes = n < 46 ? 1 + (n % 2) : n % 3 ? 2 : 0;
   if (n > LESSON.kitten && n < 32) s.sleepy = 0; // kitten practice alone
   if (n > LESSON.boxes && n < 44) s.sleepy = s.kittens = 0; // box practice alone
+  if (n > LESSON.moony && n % 4 === 3) s.moony = 1;
+  if (n > LESSON.moony && n < 38) s.sleepy = s.kittens = s.scratchy = 0; // Moony practice alone
   return s;
 }
 
@@ -159,9 +164,24 @@ function applySpecials(lv: Level, sp: Specials, seed: number) {
     const c = pick((c) => (wave.get(c.id) ?? 0) >= 1 && c.cells.length >= 3) ?? pick((c) => (wave.get(c.id) ?? 0) >= 1);
     if (c) c.breed = SCRATCHY;
   }
+  // Moony hides right in front of another cat: that cat looks free, bumps into him and reveals him
+  for (let i = 0; i < (sp.moony ?? 0); i++) {
+    const b = new Board(lv);
+    const firstBlockers = new Set<number>();
+    for (const c of lv.cats) {
+      const r = b.check(c.id);
+      if (!r.free && r.blocker >= 0 && !r.mother) firstBlockers.add(r.blocker);
+    }
+    const c = pick((c) => firstBlockers.has(c.id) && c.breed !== SCRATCHY && c.mother === undefined
+      && !lv.cats.some((k) => k.mother === c.id));
+    if (c) {
+      c.breed = MOONY;
+      c.sleepy = false;
+    }
+  }
   for (let i = 0; i < sp.kittens; i++) addKitten(lv, wave, used, r);
   for (let i = 0; i < sp.sleepy; i++) {
-    const c = pick((c) => c.mother === undefined && c.breed !== SCRATCHY);
+    const c = pick((c) => c.mother === undefined && c.breed !== SCRATCHY && c.breed !== MOONY);
     if (c) c.sleepy = true;
   }
 }
@@ -180,7 +200,7 @@ function addKitten(lv: Level, wave: Map<number, number>, used: Set<number>, r: (
     for (x += DX[d], y += DY[d]; b.inside(x, y); x += DX[d], y += DY[d]) lane.add(y * lv.w + x);
   }
   const mothers = lv.cats
-    .filter((m) => !used.has(m.id) && m.breed !== SCRATCHY && !m.sleepy && m.mother === undefined)
+    .filter((m) => !used.has(m.id) && m.breed !== SCRATCHY && m.breed !== MOONY && !m.sleepy && m.mother === undefined)
     .sort((a, z) => (wave.get(z.id) ?? 0) - (wave.get(a.id) ?? 0));
   const mother = mothers[0];
   if (!mother) return;

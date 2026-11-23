@@ -7,7 +7,7 @@ import { LESSON } from './levels';
 
 export type TipKey =
   | 'blocked' | 'hint' | 'scratchy' | 'sleepy' | 'kitten' | 'boxes' | 'hard' | 'daily'
-  | 'combo' | 'cafe' | 'collection' | 'event';
+  | 'combo' | 'cafe' | 'collection' | 'event' | 'moony';
 
 export interface LevelCtx {
   mode: 'level' | 'daily';
@@ -17,6 +17,7 @@ export interface LevelCtx {
   boxes: boolean;
   scratchy: boolean;
   kittens: boolean;
+  moony?: boolean;
 }
 
 /** The daily puzzle and the map extras open after the first five levels. */
@@ -26,6 +27,7 @@ export const DAILY_FROM_LEVEL = 6;
 export function levelTips(c: LevelCtx, seen: readonly string[]): TipKey[] {
   const out: TipKey[] = [];
   if (c.mode === 'daily') out.push('daily');
+  if (c.moony) out.push('moony');
   if (c.scratchy) out.push('scratchy');
   if (c.kittens) out.push('kitten');
   if (c.sleepy) out.push('sleepy');

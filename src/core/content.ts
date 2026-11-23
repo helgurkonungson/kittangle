@@ -22,9 +22,13 @@ export const BREEDS: Breed[] = [
   { key: 'golden', body: 0xffd54a, accent: 0xf0a500, rare: true },
   // Scratchy: charcoal blue-gray, coral neckerchief (drawn in drawCat)
   { key: 'scratchy', body: 0x5b6577, accent: 0x454d5c, special: true },
+  // Moony: midnight indigo with a gold crescent on the forehead; invisible until something bumps into him
+  { key: 'moony', body: 0x2a2858, accent: 0x1b1a3d, special: true },
 ];
 /** index of Scratchy in BREEDS */
 export const SCRATCHY = 12;
+/** index of Moony in BREEDS */
+export const MOONY = 13;
 /** the twelve collectible variants */
 export const COLLECTIBLE = BREEDS.filter((b) => !b.special).length;
 
