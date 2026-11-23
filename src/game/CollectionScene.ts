@@ -10,7 +10,7 @@ import { addFriendship, canTreat, FRIEND_MAX, friendLevel, friendProgress, frien
 import { utcDate } from '../core/levels';
 import { sfx } from './sfx';
 import { grant, persist, platform, save } from './state';
-import { C, isLand, modal, toast, txt, W, H } from './ui';
+import { C, isLand, modal, toast, txt, W, H, fitCamera } from './ui';
 import { candy, chip, ribbon, roundBtn, S, stage, title } from './style';
 import { icon } from './icons';
 import { mix } from './drawCat';
@@ -29,6 +29,7 @@ export class CollectionScene extends Phaser.Scene {
   }
 
   create() {
+    fitCamera(this);
     this.time.delayedCall(350, () => tipOnce(this, 'collection'));
     if (this.msg) this.time.delayedCall(50, () => toast(this, this.msg, H - 80));
     const land = isLand();

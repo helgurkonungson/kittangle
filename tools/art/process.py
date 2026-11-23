@@ -16,9 +16,10 @@ SRC = Path(sys.argv[1] if len(sys.argv) > 1 else '../Art')
 DST = Path(__file__).resolve().parents[2] / 'public' / 'art'
 # folder -> (max size in px, remove background)
 RULES = {
-    'heads': (192, True), 'tails': (128, True), 'portraits': (320, True), 'obstacles': (128, True),
-    'overlays': (128, True), 'ui': (128, True), 'accessories': (192, True), 'story': (384, True),
-    'cafe': (384, True), 'backgrounds': (1280, False), 'kittens': (256, True), 'map': (256, True),
+    # 2026-11-23: sized for high-DPI rendering (game renders up to 3x); sources smaller than this stay native
+    'heads': (384, True), 'tails': (384, True), 'portraits': (640, True), 'obstacles': (256, True),
+    'overlays': (384, True), 'ui': (256, True), 'accessories': (384, True), 'story': (768, True),
+    'cafe': (768, True), 'backgrounds': (2160, False), 'kittens': (512, True), 'map': (512, True),
 }
 FULL_FRAME = ('cafe_room', 'bg_', 'chapter', 'cover')
 
@@ -79,10 +80,11 @@ def save(im, folder, stem, size):
 
 def key_background(im):
     """Sheets are drawn on one flat color: remove everything of that color connected to the image border.
-    Enclosed light areas (white fur, window glass) stay because the cocoa outline separates them."""
+    Enclosed light areas (white fur, window glass) stay because the outline separates them.
+    Edges get a soft alpha and the background color is unmixed from the edge pixels (no halo, no jaggies)."""
     import numpy as np
     from scipy import ndimage
-    a = np.array(im.convert('RGBA')).astype(np.int32)
+    a = np.array(im.convert('RGBA')).astype(np.float64)
     rgb = a[:, :, :3]
     corners = np.array([rgb[2, 2], rgb[2, -3], rgb[-3, 2], rgb[-3, -3]])
     bg = np.median(corners, axis=0)
@@ -90,11 +92,19 @@ def key_background(im):
     lab, _ = ndimage.label(dist < 48)
     edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
     bgmask = np.isin(lab, edge[edge > 0])
-    # anti-aliased fringe: pixels next to the background that still lean to its color
-    ring = ndimage.binary_dilation(bgmask, iterations=2) & ~bgmask & (dist < 110)
-    alpha = np.where(bgmask | ring, 0, 255)
-    a[:, :, 3] = alpha
-    return Image.fromarray(a.astype(np.uint8))
+    # edge band next to the background: alpha from the color distance, 0 at the bg color, 1 well away from it
+    band = ndimage.binary_dilation(bgmask, iterations=3) & ~bgmask
+    soft = np.clip((dist - 40) / 90, 0, 1)
+    alpha = np.where(bgmask, 0.0, np.where(band, soft, 1.0))
+    # light smoothing of the matte, only around the edge band
+    near = ndimage.binary_dilation(band, iterations=1)
+    alpha = np.where(near, ndimage.gaussian_filter(alpha, 0.7), alpha)
+    # unmix: observed = a*fg + (1-a)*bg  ->  fg = (observed - (1-a)*bg) / a
+    al = np.maximum(alpha, 1e-3)[..., None]
+    fg = np.clip((rgb - (1 - al) * bg) / al, 0, 255)
+    rgb = np.where((alpha < 0.999)[..., None], fg, rgb)
+    out = np.dstack([rgb, alpha * 255]).round().astype(np.uint8)
+    return Image.fromarray(out)
 
 
 def cut_sheet(path, rows, cols):
@@ -110,7 +120,7 @@ def cut_sheet(path, rows, cols):
         cells = [im.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch))) for r in range(rows) for c in range(cols)]
         return [remove(c) if remove else c for c in cells]
     a = np.array(key_background(im))
-    lab, _ = ndimage.label(a[:, :, 3] > 0)
+    lab, _ = ndimage.label(a[:, :, 3] > 8)
     cells = [np.zeros(lab.shape, bool) for _ in range(rows * cols)]
     for i, sl in enumerate(ndimage.find_objects(lab), start=1):
         part = lab[sl] == i
@@ -173,7 +183,7 @@ for stem, (folder, aspect, width, focus) in FRAMES.items():
     print('ok frame', stem)
 
 # single transparent items in the Art root (logo, shelf): flat background keyed like sheets
-SINGLES = {'logo': ('ui', 640), 'trophy_shelf': ('cafe', 480)}
+SINGLES = {'logo': ('ui', 1600), 'trophy_shelf': ('cafe', 480)}
 for stem, (folder, size) in SINGLES.items():
     f = SRC / f'{stem}.png'
     if f.exists():

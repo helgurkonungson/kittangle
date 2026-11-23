@@ -8,7 +8,7 @@ import { EventScene } from './game/EventScene';
 import { LevelScene } from './game/LevelScene';
 import { MapScene } from './game/MapScene';
 import { initState } from './game/state';
-import { C, H, screenLand, setOrientation, W, wantsLand } from './game/ui';
+import { C, H, pickRes, RES, screenLand, setOrientation, setRes, W, wantsLand } from './game/ui';
 import { TitleScene } from './game/TitleScene';
 
 // Phaser text needs the webfont ready before the first frame (falls back to system fonts offline or for CJK)
@@ -19,11 +19,12 @@ const fonts = Promise.race([
 
 Promise.all([initState(), fonts]).then(() => {
   setOrientation(wantsLand());
+  setRes(pickRes());
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'app',
-    width: W,
-    height: H,
+    width: W * RES,
+    height: H * RES,
     backgroundColor: C.bg,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     scene: [PreloadScene, TitleScene, MapScene, LevelScene, CafeScene, CollectionScene, EventScene],
@@ -35,9 +36,11 @@ Promise.all([initState(), fonts]).then(() => {
     clearTimeout(timer);
     timer = window.setTimeout(() => {
       const land = wantsLand();
-      if (land === screenLand) return;
+      const res = pickRes();
+      if (land === screenLand && res === RES) return;
       setOrientation(land);
-      game.scale.setGameSize(W, H);
+      setRes(res);
+      game.scale.setGameSize(W * RES, H * RES);
       for (const sc of game.scene.getScenes(true)) if (sc.scene.key !== 'Preload') sc.scene.restart(sc.sys.settings.data);
     }, 250);
   });

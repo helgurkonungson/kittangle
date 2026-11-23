@@ -3,7 +3,7 @@ import { Challenge, challengeParams, fmtTime, parseChallenge, Tap, tapPattern } 
 import { t } from '../i18n';
 import { iconKey } from './icons';
 import { platform } from './state';
-import { C, FONT, toast } from './ui';
+import { C, FONT, RES, toast } from './ui';
 
 /** Friend challenge from the link the game was opened with (null when none). */
 let cached: Challenge | null | undefined;
@@ -16,7 +16,7 @@ export const markChallengeOffered = () => { offered = true; };
 export function snapshot(s: Phaser.Scene, x: number, y: number, w: number, h: number): Promise<HTMLImageElement | null> {
   return new Promise((res) => {
     try {
-      s.game.renderer.snapshotArea(Math.max(0, x), Math.max(0, y), w, h, (img) => res(img instanceof HTMLImageElement ? img : null));
+      s.game.renderer.snapshotArea(Math.max(0, x) * RES, Math.max(0, y) * RES, w * RES, h * RES, (img) => res(img instanceof HTMLImageElement ? img : null));
     } catch {
       res(null);
     }

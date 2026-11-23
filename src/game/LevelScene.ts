@@ -17,7 +17,7 @@ import { betweenLevels, rewarded, rewardedReady } from './ads';
 import { addFish, grantPaws, persist, platform, save, unlockBreed } from './state';
 import { PAWS } from '../core/live';
 import { candy, card, chip, pawBar, roundBtn, S, stage, title } from './style';
-import { button, C, H, toast, txt, W, DIM, isLand } from './ui';
+import { button, C, H, toast, txt, W, DIM, isLand, fitCamera } from './ui';
 import { icon } from './icons';
 import { fmtTime, Tap } from '../core/share';
 import { challenge, drawCard, prepareDailyShare, snapshot } from './share';
@@ -101,6 +101,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   create() {
+    fitCamera(this);
     const d = this.d;
     this.level = d.mode === 'level' ? getLevel(d.n) : getDaily(d.date);
     this.board = new Board(this.level);
@@ -139,9 +140,9 @@ export class LevelScene extends Phaser.Scene {
 
     const zone = this.add.zone(this.ox - this.cs / 2, this.oy - this.cs / 2, this.cs * (w + 1), this.cs * (h + 1));
     zone.setOrigin(0).setInteractive();
-    zone.on('pointerdown', (p: Phaser.Input.Pointer) => this.onTap(p.x, p.y));
+    zone.on('pointerdown', (p: Phaser.Input.Pointer) => this.onTap(p.worldX, p.worldY));
     // mouse hover previews the exit path (GDD §14), never needed to play
-    zone.on('pointermove', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) this.hover(p.x, p.y); });
+    zone.on('pointermove', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) this.hover(p.worldX, p.worldY); });
     zone.on('pointerout', () => this.hover(-1, -1));
 
     this.drawHud();
@@ -285,8 +286,9 @@ export class LevelScene extends Phaser.Scene {
       roundBtn(this, 180, 600, 86, S.pink, S.pinkLip, '↻', restart);
       hintX = 284;
       hintY = 600;
-      // Scratchy hangs around on the right and reacts to the board
-      this.mascot = art(this, 'scratchy_idle', W - 128, H + 6, 300, 330)?.setOrigin(0.5, 1) ?? undefined;
+      // Scratchy watches from the right only on levels where he is on the board
+      if (this.level.cats.some((c) => c.breed === SCRATCHY))
+        this.mascot = art(this, 'scratchy_idle', W - 128, H + 6, 300, 330)?.setOrigin(0.5, 1) ?? undefined;
       if (this.mascot) this.tweens.add({ targets: this.mascot, y: H + 18, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     } else {
       roundBtn(this, 66, 70, 84, S.purpleBtn, S.purpleLip, 'map', () => this.leave());

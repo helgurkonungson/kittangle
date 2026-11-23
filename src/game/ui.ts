@@ -8,6 +8,22 @@ import { icon, IconName } from './icons';
 export let W = 720;
 export let H = 1280;
 export const isLand = () => W > H;
+/** Render scale: the canvas has W·RES × H·RES pixels and every camera zooms by RES (sharp on 4K screens). */
+export let RES = 1;
+export function setRes(r: number) {
+  RES = r;
+}
+/** Picks the render scale for this screen: up to 3× (4K), in half steps. */
+export function pickRes() {
+  const longest = Math.max(window.innerWidth, window.innerHeight) * (window.devicePixelRatio || 1);
+  return Math.min(3, Math.max(1, Math.ceil((longest / 1280) * 2) / 2));
+}
+/** Every scene calls this first: design coordinates (W×H) map onto the high-resolution canvas. */
+export function fitCamera(sc: Phaser.Scene, column = false) {
+  const cam = sc.cameras.main;
+  cam.setZoom(RES * (column ? 720 / 1280 : 1));
+  cam.centerOn(column ? 360 : W / 2, column ? 640 : H / 2);
+}
 /** real orientation of the canvas (W/H can be portrait inside a landscape canvas, see portraitColumn) */
 export let screenLand = false;
 export function setOrientation(land: boolean) {
@@ -21,13 +37,11 @@ export function setOrientation(land: boolean) {
  * are shown as a centered column; the camera zooms out and the sides show the violet stage color.
  */
 export function portraitColumn(sc: Phaser.Scene) {
-  if (!screenLand) return;
+  if (!screenLand) return fitCamera(sc);
   W = 720;
   H = 1280;
-  const cam = sc.cameras.main;
-  cam.setZoom(720 / 1280);
-  cam.centerOn(360, 640);
-  cam.setBackgroundColor(0x7a4ae0);
+  fitCamera(sc, true);
+  sc.cameras.main.setBackgroundColor(0x7a4ae0);
   // violet stage on the sides (world space left and right of the 720-wide column)
   const g = sc.add.graphics().setDepth(-1000);
   g.fillGradientStyle(0x8b5cf6, 0xc04fe0, 0x6d3fd4, 0x8b5cf6, 1).fillRect(-900, 0, 2520, 1280);
@@ -75,7 +89,7 @@ const kindOf = (color?: number): Kind =>
 
 export function txt(s: Phaser.Scene, x: number, y: number, str: string, size = 32, color = C.ink) {
   return s.add
-    .text(x, y, str, { fontFamily: FONT, fontSize: `${size}px`, color, align: 'center', fontStyle: '800' })
+    .text(x, y, str, { fontFamily: FONT, fontSize: `${size}px`, color, align: 'center', fontStyle: '800', resolution: RES })
     .setOrigin(0.5);
 }
 
@@ -215,7 +229,7 @@ export function modal(s: Phaser.Scene, title: string, lines: string[], buttons: 
   const box = { y: 0, h: 0 };
   if (closable)
     dim.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (p.y < box.y || p.y > box.y + box.h || p.x < L + 60 || p.x > L + MW - 60) close();
+      if (p.worldY < box.y || p.worldY > box.y + box.h || p.worldX < L + 60 || p.worldX > L + MW - 60) close();
     });
   const ph0 = 190 + lines.length * 52 + buttons.length * 118;
   let top = H / 2 - ph0 / 2;

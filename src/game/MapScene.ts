@@ -8,7 +8,7 @@ import { DAILY_FROM_LEVEL } from '../core/tutorial';
 import { t } from '../i18n';
 import { playMusic, setMusicOff, setMuted, sfx } from './sfx';
 import { grant, persist, platform, save } from './state';
-import { badge, button, C, DIM, isLand, modal, panel, toast, txt, W, H } from './ui';
+import { badge, button, C, DIM, isLand, modal, panel, toast, txt, W, H, fitCamera } from './ui';
 import { blurredBackdrop, candy, chip, leaves, pawBar, ribbon, roundBtn, S, title } from './style';
 import { icon, IconName } from './icons';
 import { challenge, challengeOffered, markChallengeOffered } from './share';
@@ -34,6 +34,7 @@ export class MapScene extends Phaser.Scene {
   }
 
   create() {
+    fitCamera(this);
     platform.ready();
     const ch = this.ch;
     const first = ch * CHAPTER_LEN + 1;

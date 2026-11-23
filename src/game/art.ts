@@ -3,6 +3,7 @@ import { BREEDS } from '../core/content';
 import { drawCat, type Mood } from './drawCat';
 import { bakeIcons } from './icons';
 import { platform, save } from './state';
+import { fitCamera } from './ui';
 
 const BASE = `${import.meta.env.BASE_URL}art/`;
 /** Art for content that is not in the game yet (update 1 nursery/kittens/new breeds, update 2 winter house/yarn):
@@ -20,6 +21,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create() {
+    fitCamera(this);
     bakeIcons(this);
     const m = (this.cache.json.get('art_manifest') ?? {}) as Record<string, string>;
     const keys = Object.keys(m).filter((k) => !LATER.test(k));

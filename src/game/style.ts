@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { art } from './art';
 import { icon, IconName } from './icons';
 import { sfx } from './sfx';
-import { C, FONT, H, W } from './ui';
+import { C, FONT, H, RES, W } from './ui';
 
 /**
  * Visual kit of the 2026-11-23 style board: violet stage with bokeh and tropical leaves, pink ribbon
@@ -112,7 +112,7 @@ export function ribbon(sc: Phaser.Scene, x: number, y: number, w: number, text: 
 
 /** White display text with a thick plum outline and a drop shadow. */
 export function title(sc: Phaser.Scene, x: number, y: number, text: string, size: number, color = '#ffffff') {
-  return sc.add.text(x, y, text, { fontFamily: FONT, fontSize: `${size}px`, fontStyle: '900', color, align: 'center' })
+  return sc.add.text(x, y, text, { fontFamily: FONT, fontSize: `${size}px`, fontStyle: '900', color, align: 'center', resolution: RES })
     .setOrigin(0.5).setStroke('#39243f', Math.max(5, size * 0.2)).setShadow(0, Math.max(3, size * 0.1), '#39243f', 0, true, true);
 }
 

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BREEDS, SCRATCHY } from '../core/content';
-import { utcDate } from '../core/levels';
+import { LESSON, utcDate } from '../core/levels';
 import { DAILY_FROM_LEVEL } from '../core/tutorial';
 import { t } from '../i18n';
 import { art, has, headKey } from './art';
@@ -8,7 +8,7 @@ import { drawCat, Mood } from './drawCat';
 import { playMusic, sfx } from './sfx';
 import { platform, save } from './state';
 import { candy, chip, roundBtn, S, stage, title } from './style';
-import { H, isLand, toast, W } from './ui';
+import { fitCamera, H, isLand, RES, toast, W } from './ui';
 
 type Pt = { x: number; y: number };
 interface Mover {
@@ -41,6 +41,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create() {
+    fitCamera(this);
     platform.ready();
     this.movers = [];
     this.cs = Math.round(Math.min(W, H) / 8);
@@ -50,10 +51,11 @@ export class TitleScene extends Phaser.Scene {
 
     // the interactive background catches taps that miss the buttons
     const bg = this.add.zone(0, 0, W, H).setOrigin(0).setInteractive();
-    bg.on('pointerdown', (p: Phaser.Input.Pointer) => this.tap(p.x, p.y));
+    bg.on('pointerdown', (p: Phaser.Input.Pointer) => this.tap(p.worldX, p.worldY));
 
     // Scratchy peeks from the bottom-right corner and reacts to taps on him
-    this.scratchy = art(this, 'scratchy_idle', W - 120, H + 10, isLand() ? 300 : 260, isLand() ? 300 : 260)?.setOrigin(0.5, 1).setDepth(5) ?? undefined;
+    // Scratchy shows up in the menu only after the player has met him
+    if (save.level > LESSON.scratchy) this.scratchy = art(this, 'scratchy_idle', W - 120, H + 10, isLand() ? 300 : 260, isLand() ? 300 : 260)?.setOrigin(0.5, 1).setDepth(5) ?? undefined;
     if (this.scratchy) {
       this.scratchy.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.poke());
       this.tweens.add({ targets: this.scratchy, y: H + 22, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
@@ -137,7 +139,7 @@ export class TitleScene extends Phaser.Scene {
       y += DY[d];
     }
     const pool = save.breeds.length ? save.breeds : [0, 1];
-    const breed = Math.random() < 0.1 ? SCRATCHY : pool[Phaser.Math.Between(0, pool.length - 1)];
+    const breed = save.level > LESSON.scratchy && Math.random() < 0.1 ? SCRATCHY : pool[Phaser.Math.Between(0, pool.length - 1)];
     const m: Mover = {
       path: cells.map((c) => ({ x: (c.x + 0.5) * cs, y: (c.y + 0.5) * cs })),
       len, s: 0, speed: 1.6 + Math.random() * 1.2, breed, mood: 'calm', g: this.add.graphics().setAlpha(0.95),
@@ -190,7 +192,7 @@ export class TitleScene extends Phaser.Scene {
   private burst(x: number, y: number, ch: string) {
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * Math.PI * 2 + Math.random();
-      const o = this.add.text(x, y, ch, { fontSize: '34px' }).setOrigin(0.5).setDepth(20);
+      const o = this.add.text(x, y, ch, { fontSize: '34px', resolution: RES }).setOrigin(0.5).setDepth(20);
       this.tweens.add({
         targets: o, x: x + Math.cos(a) * 70, y: y + Math.sin(a) * 70, alpha: 0, scale: 1.4,
         duration: 650, ease: 'Cubic.Out', onComplete: () => o.destroy(),
