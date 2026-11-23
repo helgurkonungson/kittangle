@@ -6,7 +6,8 @@ import { utcDate } from '../core/levels';
 import { rewardText } from '../core/retention';
 import { t } from '../i18n';
 import { save } from './state';
-import { C, txt, W, backButton, panel, portraitColumn } from './ui';
+import { C, txt, W, portraitColumn } from './ui';
+import { card, chip, ribbon, roundBtn, S, stage, title } from './style';
 
 /** Weekly event track + season progress. Rewards are paid automatically when paws reach a step. */
 export class EventScene extends Phaser.Scene {
@@ -25,32 +26,39 @@ export class EventScene extends Phaser.Scene {
     const acc = ACCESSORIES[e.week];
     const trophy = TROPHIES[e.week];
 
-    backButton(this, () => this.scene.start('Map'));
-    txt(this, W / 2, 70, t('event'), 38);
-    txt(this, W / 2, 150, t('eventTitle', { name: t('acc_' + acc) }), 32);
-    txt(this, W / 2, 200, `${t('eventPaws', { n: paws })}   ·   ${t('eventDays', { n: e.daysLeft })}`, 28);
-    txt(this, W / 2, 245, t('eventHow'), 22, C.muted);
+    stage(this, { bokeh: 14 });
+    roundBtn(this, 60, 64, 84, S.purpleBtn, S.purpleLip, 'back', () => this.scene.start('Map'));
+    ribbon(this, W / 2 + 30, 64, 440, t('event').toUpperCase(), 'gift', 26);
+    title(this, W / 2, 150, t('eventTitle', { name: t('acc_' + acc) }), 30);
+    chip(this, W / 2 - 120, 206, 190, 'paw', () => String(paws));
+    chip(this, W / 2 + 130, 206, 210, '', () => t('eventDays', { n: e.daysLeft }));
+    title(this, W / 2, 262, t('eventHow'), 20, '#ffe8f6');
 
     const max = TRACK[TRACK.length - 1].paws;
     const g = this.add.graphics();
-    g.fillStyle(C.latte, 1).fillRoundedRect(110, 330, 30, 730, 15).lineStyle(4, C.inkN, 1).strokeRoundedRect(110, 330, 30, 730, 15);
-    g.fillStyle(C.primary, 1).fillRoundedRect(110, 330 + 730 * (1 - Math.min(1, paws / max)), 30, 730 * Math.min(1, paws / max), 15);
+    const fill = Math.min(1, paws / max);
+    g.fillStyle(C.inkN, 1).fillRoundedRect(107, 327, 36, 736, 18);
+    g.fillStyle(0x4b2a86, 1).fillRoundedRect(110, 330, 30, 730, 15);
+    if (fill > 0) g.fillStyle(S.yellow, 1).fillRoundedRect(110, 330 + 730 * (1 - fill), 30, 730 * fill, 15);
     TRACK.forEach((st, i) => {
       const y = 1060 - (680 * st.paws) / max;
       const done = i < claimed;
-      panel(g, 180, y - 50, 460, 92, 24, done ? 0xd8eccf : C.panel, done ? 0x9fcf8f : 0xe3cbe8);
-      g.fillStyle(done ? C.green : C.panel, 1).lineStyle(4, C.inkN, 1).fillCircle(125, y, 26).strokeCircle(125, y, 26);
+      card(g, 180, y - 46, 470, 88, 24, done ? 0xe6f9cf : S.cream, done ? 0x8fcf6f : S.lavDeep);
+      g.fillStyle(C.inkN, 1).fillCircle(125, y, 29);
+      g.fillStyle(done ? S.yellow : S.lav, 1).fillCircle(125, y, 26);
       txt(this, 125, y, String(st.paws), 20);
       const label = st.reward
         ? rewardText(st.reward)
         : st.trophy
           ? `${TROPHY_ICON[trophy]} ${t('trophy_' + trophy)}`
           : `🎩 ${t('acc_' + acc)}`;
-      txt(this, 400, y, (done ? '✓ ' : '') + label, 28);
+      txt(this, 415, y - 2, (done ? '✓ ' : '') + label, 28);
     });
 
-    txt(this, W / 2, 1130, t('seasonTitle', { n: tracks }), 26);
-    sittingCat(this, 11, 170, 1200, 110).setAlpha(tracks >= SEASON_WEEKS ? 1 : 0.6);
-    txt(this, 420, 1205, t('seasonPrize'), 24, '#c08a00');
+    const fg = this.add.graphics();
+    card(fg, 30, 1100, W - 60, 150, 30);
+    txt(this, W / 2 + 60, 1140, t('seasonTitle', { n: tracks }), 24);
+    sittingCat(this, 11, 120, 1175, 120).setAlpha(tracks >= SEASON_WEEKS ? 1 : 0.6);
+    txt(this, W / 2 + 60, 1200, t('seasonPrize'), 24, '#b0700a');
   }
 }

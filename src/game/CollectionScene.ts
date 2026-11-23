@@ -39,10 +39,10 @@ export class CollectionScene extends Phaser.Scene {
     chip(this, W - (land ? 110 : 80), 58, land ? 150 : 120, '', () => `${save.breeds.filter((b) => b < COLLECTIBLE).length} / ${COLLECTIBLE}`);
 
     const cw = land ? 196 : 152;
-    const chh = land ? 172 : 214;
+    const chh = land ? 160 : 214;
     const gap = land ? 18 : 14;
-    const top = land ? 130 : 150;
-    const rowH = land ? 196 : 322;
+    const top = land ? 122 : 150;
+    const rowH = land ? 184 : 322;
     const gx = land ? 330 : W / 2 - (cw * 4 + gap * 3) / 2;
     SETS.forEach((set, si) => {
       const y0 = top + si * rowH;

@@ -1,41 +1,22 @@
 import Phaser from 'phaser';
-import { BREEDS, SCRATCHY } from '../core/content';
-import { LESSON, utcDate } from '../core/levels';
+import { utcDate } from '../core/levels';
 import { DAILY_FROM_LEVEL } from '../core/tutorial';
 import { t } from '../i18n';
-import { art, has, headKey } from './art';
-import { drawCat, Mood } from './drawCat';
+import { art, has } from './art';
 import { playMusic, sfx } from './sfx';
 import { platform, save } from './state';
 import { candy, chip, roundBtn, S, stage, title } from './style';
 import { fitCamera, H, isLand, RES, toast, W } from './ui';
 
-type Pt = { x: number; y: number };
-interface Mover {
-  path: Pt[];
-  len: number;
-  s: number;
-  speed: number;
-  breed: number;
-  mood: Mood;
-  g: Phaser.GameObjects.Graphics;
-  head?: Phaser.GameObjects.Image;
-}
-
-const DX = [0, 1, 0, -1];
-const DY = [-1, 0, 1, 0];
+type Img = Phaser.GameObjects.Image;
 
 /**
- * Main menu with a living background: stretchy cats wander across the violet stage, a tap on a cat
- * makes it meow and dash, a tap on empty space leaves paw prints, Scratchy peeks from the corner.
+ * Main menu: the café room (art4) with three living cats. The white cat watches the window and wags
+ * her tail, the gray and the calico breathe in their sleep, the ginger lies on the rug and bats a yarn
+ * ball. A tap on a cat makes it react; a tap elsewhere leaves paw prints.
  * First-time players skip it and land straight in level 1 (GDD 2.0 §4).
  */
 export class TitleScene extends Phaser.Scene {
-  private movers: Mover[] = [];
-  private cs = 90;
-  private layer!: Phaser.GameObjects.Container;
-  private scratchy?: Phaser.GameObjects.Image;
-
   constructor() {
     super('Title');
   }
@@ -43,147 +24,101 @@ export class TitleScene extends Phaser.Scene {
   create() {
     fitCamera(this);
     platform.ready();
-    this.movers = [];
-    this.cs = Math.round(Math.min(W, H) / 8);
-    stage(this, { bokeh: 22 });
-    this.layer = this.add.container(0, 0).setDepth(2);
     playMusic('music_menu');
-
-    // the interactive background catches taps that miss the buttons
-    const bg = this.add.zone(0, 0, W, H).setOrigin(0).setInteractive();
-    bg.on('pointerdown', (p: Phaser.Input.Pointer) => this.tap(p.worldX, p.worldY));
-
-    // Scratchy peeks from the bottom-right corner and reacts to taps on him
-    // Scratchy shows up in the menu only after the player has met him
-    if (save.level > LESSON.scratchy) this.scratchy = art(this, 'scratchy_idle', W - 120, H + 10, isLand() ? 300 : 260, isLand() ? 300 : 260)?.setOrigin(0.5, 1).setDepth(5) ?? undefined;
-    if (this.scratchy) {
-      this.scratchy.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.poke());
-      this.tweens.add({ targets: this.scratchy, y: H + 22, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    }
-
-    this.menu();
-    for (let i = 0; i < 3; i++) this.time.delayedCall(i * 700, () => this.spawn());
-    this.time.addEvent({ delay: 2300, loop: true, callback: () => this.movers.length < 6 && this.spawn() });
-  }
-
-  update(_t: number, dt: number) {
-    for (const m of [...this.movers]) {
-      m.s += (m.speed * dt) / 1000;
-      if (m.s >= m.path.length - 1) {
-        m.g.destroy();
-        m.head?.destroy();
-        this.movers.splice(this.movers.indexOf(m), 1);
-        continue;
-      }
-      this.draw(m);
-    }
-  }
-
-  private menu() {
     const land = isLand();
-    const cx = W / 2;
-    const logoY = land ? 170 : 300;
-    const logo = art(this, 'logo', cx, logoY, land ? 620 : 640, land ? 300 : 340)?.setDepth(10);
-    if (logo) this.tweens.add({ targets: logo, scale: logo.scale * 1.04, angle: { from: -1.2, to: 1.2 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    else title(this, cx, logoY, 'Kittangle', 110, '#ffd84a').setDepth(10);
-    title(this, cx, logoY + (land ? 150 : 175), t('tagline'), land ? 28 : 30).setDepth(10);
+    const room = has(this, land ? 'room_land' : 'room_port') ? (land ? 'room_land' : 'room_port') : '';
+    if (room) art(this, room, W / 2, H / 2, W, H, true);
+    else stage(this, { bokeh: 22 });
 
-    const playY = land ? 470 : 760;
-    const play = candy(this, cx, playY, 440, 116, t('play', { n: save.level }), () => {
-      sfx.node();
-      this.scene.start('Level', { mode: 'level', n: save.level });
-    }).setDepth(10);
-    this.tweens.add({ targets: play, scale: 1.04, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-
-    const today = utcDate();
-    const items: [string, number, number, () => void][] = [
-      ['map', S.purpleBtn, S.purpleLip, () => this.scene.start('Map')],
-      ['cafe', S.pink, S.pinkLip, () => this.scene.start('Cafe')],
-      ['collection', 0x22c3e6, 0x1590a8, () => this.scene.start('Collection')],
-      ['daily', S.yellow, S.yellowLip, () => {
-        if (save.level < DAILY_FROM_LEVEL) return toast(this, t('dailyLocked', { n: DAILY_FROM_LEVEL - 1 }));
-        this.scene.start('Level', { mode: 'daily', date: today });
-      }],
-    ];
-    const rowY = playY + (land ? 130 : 150);
-    items.forEach(([ic, col, lip, fn], i) => {
-      const x = cx + (i - 1.5) * 128;
-      roundBtn(this, x, rowY, 100, col, lip, ic, fn).setDepth(10);
-      title(this, x, rowY + 72, t(ic === 'daily' ? 'dailyShort' : ic), 22).setDepth(10);
-    });
-    chip(this, W - 110, 52, 170, 'fish', () => String(save.fish)).c.setDepth(10);
+    const bg = this.add.zone(0, 0, W, H).setOrigin(0).setInteractive();
+    bg.on('pointerdown', (p: Phaser.Input.Pointer) => this.paws(p.worldX, p.worldY));
+    if (room) this.cats(land);
+    this.menu(land);
   }
 
-  /** Random walk across the screen on a coarse grid: from one edge to another, a few turns. */
-  private spawn() {
-    const cs = this.cs;
-    const cols = Math.ceil(W / cs);
-    const rows = Math.ceil(H / cs);
-    const side = Phaser.Math.Between(0, 3);
-    let d = (side + 2) % 4; // walk inward
-    let x = side === 1 ? cols + 1 : side === 3 ? -2 : Phaser.Math.Between(1, cols - 2);
-    let y = side === 0 ? -2 : side === 2 ? rows + 1 : Phaser.Math.Between(1, rows - 2);
-    const len = Phaser.Math.Between(3, 6);
-    const cells: Pt[] = [];
-    // tail starts outside the screen: prepend the cells behind the start
-    for (let i = len; i > 0; i--) cells.push({ x: x - DX[d] * i, y: y - DY[d] * i });
-    for (let step = 0; step < 80; step++) {
-      cells.push({ x, y });
-      const inside = x >= 0 && y >= 0 && x < cols && y < rows;
-      if (!inside && step > 4) {
-        for (let i = 1; i <= len + 1; i++) cells.push({ x: x + DX[d] * i, y: y + DY[d] * i });
-        break;
+  // ---------- the living room ----------
+
+  private cats(land: boolean) {
+    // positions are tuned to the two room pictures (screen units after the cover fit)
+    const P = land
+      ? { white: [600, 338, 175], tree: [210, 214, 112], sofa: [668, 508, 128], rug: [560, 640, 240] }
+      : { white: [420, 552, 122], tree: [86, 500, 92], sofa: [462, 818, 118], rug: [250, 928, 205] };
+
+    // white cat on the windowsill, seen from behind; the tail sways from its base
+    const [wx, wy, wh] = P.white;
+    const white = this.piece('menu_white_back', wx, wy, wh, 0.5, 1);
+    if (white) {
+      const tail = this.piece('menu_white_tail', wx + white.displayWidth * 0.2, wy - white.displayHeight * 0.13, wh * 0.62, 0.45, 0.97);
+      if (tail) {
+        tail.setDepth(white.depth + 1);
+        this.tweens.add({ targets: tail, angle: { from: -9, to: 13 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+        // now and then a quick flick
+        this.time.addEvent({ delay: 4200, loop: true, callback: () => this.tweens.add({ targets: tail, scaleY: tail.scaleY * 1.08, duration: 160, yoyo: true }) });
       }
-      if (inside && step > 1 && Math.random() < 0.22) d = (d + (Math.random() < 0.5 ? 1 : 3)) % 4;
-      x += DX[d];
-      y += DY[d];
+      this.tweens.add({ targets: white, scaleY: white.scaleY * 1.012, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+      this.tappable(white, () => this.tweens.add({ targets: white, angle: { from: -3, to: 3 }, duration: 90, yoyo: true, repeat: 2, onComplete: () => white.setAngle(0) }));
     }
-    const pool = save.breeds.length ? save.breeds : [0, 1];
-    const breed = save.level > LESSON.scratchy && Math.random() < 0.1 ? SCRATCHY : pool[Phaser.Math.Between(0, pool.length - 1)];
-    const m: Mover = {
-      path: cells.map((c) => ({ x: (c.x + 0.5) * cs, y: (c.y + 0.5) * cs })),
-      len, s: 0, speed: 1.6 + Math.random() * 1.2, breed, mood: 'calm', g: this.add.graphics().setAlpha(0.95),
+
+    // two sleepers breathing out of phase, with drifting z's
+    const sleeper = (key: string, [x, y, w]: number[], period: number, delay: number) => {
+      const im = this.piece(key, x, y, w, 0.5, 1);
+      if (!im) return;
+      this.tweens.add({ targets: im, scaleY: im.scaleY * 1.05, scaleX: im.scaleX * 1.015, duration: period, delay, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+      this.time.addEvent({ delay: period * 2, startAt: delay, loop: true, callback: () => this.zzz(x + im.displayWidth * 0.25, y - im.displayHeight * 0.85) });
+      this.tappable(im, () => this.tweens.add({ targets: im, y: y - 14, duration: 120, yoyo: true, ease: 'Quad.Out' }));
     };
-    this.layer.add(m.g);
-    this.movers.push(m);
+    sleeper('menu_gray_sleep', P.sofa, 1700, 0);
+    sleeper('menu_calico_sleep', P.tree, 1500, 600);
+
+    // ginger on her back: the raised paw bats the yarn ball
+    const [gx, gy, gw] = P.rug;
+    const paw = this.piece('menu_ginger_paw', 0, 0, gw * 0.32, 0.5, 0.92);
+    const ginger = this.piece('menu_ginger_play', gx, gy, gw, 0.5, 0.5, true);
+    if (ginger && paw) {
+      const sx = gx + (0.56 - 0.5) * ginger.displayWidth;
+      const sy = gy + (0.6 - 0.5) * ginger.displayHeight;
+      paw.setPosition(sx, sy).setAngle(-25).setDepth(ginger.depth - 1);
+      const yarn = this.piece('menu_yarn', sx - gw * 0.2, sy - gw * 0.42, gw * 0.3, 0.5, 0.5);
+      const fish = this.piece('menu_fish', gx + gw * 0.55, gy + gw * 0.12, gw * 0.3, 0.5, 0.5);
+      fish?.setAngle(-14);
+      const bat = (hard = false) => {
+        this.tweens.add({ targets: paw, angle: { from: -25, to: 18 }, duration: hard ? 140 : 220, yoyo: true, ease: 'Quad.Out' });
+        if (yarn) this.tweens.add({
+          targets: yarn, y: yarn.y - (hard ? 60 : 30), angle: yarn.angle + (hard ? 200 : 90), duration: hard ? 260 : 300,
+          delay: 120, yoyo: true, ease: 'Quad.Out',
+        });
+      };
+      this.time.addEvent({ delay: 1900, loop: true, callback: () => bat() });
+      this.tweens.add({ targets: ginger, angle: { from: -2, to: 2 }, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+      this.tappable(ginger, () => bat(true));
+      if (yarn) this.tappable(yarn, () => bat(true));
+    }
   }
 
-  private points(m: Mover) {
-    const out: Pt[] = [];
-    for (let j = 0; j < m.len; j++) {
-      const k = m.s + (m.len - 1 - j);
-      const i = Math.min(Math.floor(k), m.path.length - 1);
-      const f = k - i;
-      const a = m.path[i];
-      const b = m.path[Math.min(i + 1, m.path.length - 1)];
-      out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
-    }
-    return out;
+  /** Image with its height (or width) fitted, origin given; null without the art. */
+  private piece(key: string, x: number, y: number, size: number, ox: number, oy: number, byWidth = false): Img | null {
+    if (!has(this, key)) return null;
+    const im = this.add.image(x, y, key).setOrigin(ox, oy).setDepth(2);
+    im.setScale(size / (byWidth ? im.width : im.height));
+    return im;
   }
 
-  private draw(m: Mover) {
-    const p = this.points(m);
-    const key = headKey(this, BREEDS[m.breed].key, m.mood);
-    const useArt = has(this, key);
-    drawCat(m.g, p, m.breed, this.cs * 0.9, m.mood, false, undefined, useArt);
-    if (!useArt) return;
-    if (!m.head) {
-      m.head = this.add.image(0, 0, key);
-      this.layer.add(m.head);
-    }
-    const rot = Math.atan2(p[0].y - p[1].y, p[0].x - p[1].x) + Math.PI / 2;
-    m.head.setTexture(key).setDisplaySize(this.cs * 0.95, this.cs * 0.95).setPosition(p[0].x, p[0].y).setRotation(rot);
+  private tappable(im: Img, react: () => void) {
+    im.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 40 }).on('pointerdown', (p: Phaser.Input.Pointer) => {
+      sfx.meow(0.85 + Math.random() * 0.4);
+      react();
+      this.burst(p.worldX, p.worldY, '💗');
+    });
   }
 
-  private tap(x: number, y: number) {
-    const hit = this.movers.find((m) => this.points(m).some((q) => Math.hypot(q.x - x, q.y - y) < this.cs * 0.55));
-    if (hit) {
-      hit.mood = 'happy';
-      hit.speed = 7;
-      sfx.meow(0.9 + Math.random() * 0.4);
-      this.burst(x, y, '💗');
-      return;
-    }
+  private zzz(x: number, y: number) {
+    const z = this.add.text(x, y, 'z', { fontFamily: 'Nunito, sans-serif', fontStyle: '900', fontSize: '30px', color: '#ffffff', stroke: '#7957f5', strokeThickness: 6, resolution: RES })
+      .setOrigin(0.5).setDepth(3).setAlpha(0);
+    this.tweens.add({ targets: z, alpha: { from: 0, to: 1 }, duration: 400, yoyo: true, hold: 600 });
+    this.tweens.add({ targets: z, x: x + 26, y: y - 60, scale: 1.4, duration: 1400, onComplete: () => z.destroy() });
+  }
+
+  private paws(x: number, y: number) {
     sfx.pop();
     this.burst(x, y, '🐾');
   }
@@ -200,22 +135,43 @@ export class TitleScene extends Phaser.Scene {
     }
   }
 
-  private poke() {
-    const sc = this.scratchy;
-    if (!sc || sc.getData('busy')) return;
-    sc.setData('busy', true);
-    sfx.scratchySwipe();
-    sc.setTexture(has(this, 'scratchy_swipe') ? 'scratchy_swipe' : sc.texture.key);
-    const fx = art(this, `fx_scratch_${Phaser.Math.Between(0, 5)}`, sc.x - 160, sc.y - 220, 260, 260)?.setDepth(30);
-    if (fx) this.tweens.add({ targets: fx, alpha: 0, delay: 350, duration: 400, onComplete: () => fx.destroy() });
-    this.cameras.main.shake(100, 0.004);
-    this.time.delayedCall(700, () => {
-      if (has(this, 'scratchy_smug')) sc.setTexture('scratchy_smug');
-      sfx.scratchySmug();
+  // ---------- menu ----------
+
+  private menu(land: boolean) {
+    // landscape: a column on the right (over the counter), portrait: logo on top, buttons on the floor
+    const cx = land ? 1030 : W / 2;
+    const logoY = land ? 160 : 232;
+    const logo = art(this, 'logo', cx, logoY, land ? 470 : 500, land ? 290 : 330)?.setDepth(10);
+    if (logo) this.tweens.add({ targets: logo, scale: logo.scale * 1.03, angle: { from: -1, to: 1 }, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    else title(this, cx, logoY, 'Kittangle', 100, '#ffd84a').setDepth(10);
+    const tag = title(this, cx, logoY + (land ? 168 : 188), t('tagline'), land ? 26 : 28).setDepth(10);
+    tag.setStroke('#5b2a86', 10).setShadow(0, 3, '#39243f', 0, true, true);
+
+    const playY = land ? 450 : 1058;
+    const play = candy(this, cx, playY, land ? 400 : 440, land ? 104 : 112, t('play', { n: save.level }), () => {
+      sfx.node();
+      this.scene.start('Level', { mode: 'level', n: save.level });
+    }).setDepth(10);
+    this.tweens.add({ targets: play, scale: 1.04, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+
+    const today = utcDate();
+    const items: [string, number, number, () => void][] = [
+      ['map', S.purpleBtn, S.purpleLip, () => this.scene.start('Map')],
+      ['cafe', S.pink, S.pinkLip, () => this.scene.start('Cafe')],
+      ['collection', 0x22c3e6, 0x1590a8, () => this.scene.start('Collection')],
+      ['daily', S.yellow, S.yellowLip, () => {
+        if (save.level < DAILY_FROM_LEVEL) return toast(this, t('dailyLocked', { n: DAILY_FROM_LEVEL - 1 }));
+        this.scene.start('Level', { mode: 'daily', date: today });
+      }],
+    ];
+    const rowY = playY + (land ? 125 : 112);
+    const step = land ? 108 : 124;
+    items.forEach(([ic, col, lip, fn], i) => {
+      const x = cx + (i - 1.5) * step;
+      roundBtn(this, x, rowY, land ? 88 : 96, col, lip, ic, fn).setDepth(10);
+      const l = title(this, x, rowY + (land ? 62 : 64), t(ic === 'daily' ? 'dailyShort' : ic), 21).setDepth(10);
+      l.setStroke('#39243f', 7);
     });
-    this.time.delayedCall(1600, () => {
-      if (has(this, 'scratchy_idle')) sc.setTexture('scratchy_idle');
-      sc.setData('busy', false);
-    });
+    chip(this, land ? 110 : W - 110, 52, 170, 'fish', () => String(save.fish)).c.setDepth(10);
   }
 }

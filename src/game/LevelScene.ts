@@ -11,6 +11,7 @@ import { CHAPTERS, progress } from '../core/meta';
 import { levelTips, pawsFor, TipKey } from '../core/tutorial';
 import { t } from '../i18n';
 import { drawCat, Mood } from './drawCat';
+import { bodyPath, drawBody, drawUnder, hasBodyArt, pathPoint } from './body';
 import { art, has, headKey } from './art';
 import { playMusic, sfx } from './sfx';
 import { betweenLevels, rewarded, rewardedReady } from './ads';
@@ -35,6 +36,8 @@ interface CatView {
   hint: boolean;
   zz?: Phaser.GameObjects.Text | Phaser.GameObjects.Image;
   head?: Phaser.GameObjects.Image;
+  /** sprite body (art4), drawn along the path; v.g then only holds the shadow and hint glow */
+  rope?: Phaser.GameObjects.Rope;
   acc?: Phaser.GameObjects.Image;
   /** shared mother–kitten heart */
   mark?: Phaser.GameObjects.Graphics;
@@ -46,6 +49,9 @@ interface CatView {
 const FAMILY = [0xff3d9a, 0x22d3e6, 0xb8f52f, 0x7957f5];
 /** Scratchy's reaction lasts ~0.8 s; taps during the cooldown only pulse the blocker */
 const SCRATCHY_COOLDOWN = 1100;
+
+/** everything that moves together when a cat bounces or shakes */
+const parts = (v: CatView) => [v.g, v.rope, v.head, v.acc].filter(Boolean) as Phaser.GameObjects.GameObject[];
 
 export class LevelScene extends Phaser.Scene {
   private d!: LevelData;
@@ -78,6 +84,8 @@ export class LevelScene extends Phaser.Scene {
   private preview?: Phaser.GameObjects.Graphics;
   private previewId = -1;
   private freeHint = false;
+  /** breeds in the order they left, for the win leap */
+  private leapers: number[] = [];
 
   constructor() {
     super('Level');
@@ -91,6 +99,7 @@ export class LevelScene extends Phaser.Scene {
     this.lastExit = -1e9;
     this.earned = 0;
     this.rescued = [];
+    this.leapers = [];
     this.ended = false;
     this.timerText = undefined;
     this.taps = [];
@@ -219,20 +228,33 @@ export class LevelScene extends Phaser.Scene {
     return v.cat.mother !== undefined ? this.cs * 0.78 : this.cs;
   }
 
-  private redraw(v: CatView, pts?: { x: number; y: number }[]) {
-    const p = pts ?? v.cat.cells.map((c) => this.px(c));
+  private redraw(v: CatView, tr?: Cell[], s = 0) {
+    const cells = tr ?? [...v.cat.cells].reverse();
+    const len = v.cat.cells.length;
+    const p = this.pointsAt(cells, len, s);
     const size = this.catSize(v);
     const key = headKey(this, BREEDS[v.cat.breed].key, v.mood);
     const accId = save.equipped[v.cat.breed];
     const useArt = has(this, key);
-    drawCat(v.g, p, v.cat.breed, size, v.mood, v.hint, useArt ? undefined : accId, useArt);
+    let head = p[0];
+    let rot = Math.atan2(p[0].y - p[1].y, p[0].x - p[1].x) + Math.PI / 2;
+    if (useArt && hasBodyArt(this, v.cat.breed)) {
+      const trPx = cells.map((c) => this.px(c));
+      const path = bodyPath(trPx, s, len, this.cs, 0.57 * size / this.cs);
+      drawUnder(v.g, path, size, v.hint);
+      v.rope = drawBody(this, v.rope, v.cat.breed, len, path, size);
+      if (!v.rope.mask) v.rope.setMask(this.mask);
+      v.rope.setPosition(v.g.x, v.g.y).setAlpha(v.g.alpha).setVisible(!v.hidden);
+      head = path[path.length - 1];
+      const neck = pathPoint(trPx, s + len - 1.4, this.cs);
+      rot = Math.atan2(head.y - neck.y, head.x - neck.x) + Math.PI / 2;
+    } else drawCat(v.g, p, v.cat.breed, size, v.mood, v.hint, useArt ? undefined : accId, useArt);
     v.g.setVisible(!v.hidden);
     v.head?.setVisible(!v.hidden);
     if (!useArt) return;
     // generated head looks up; rotate it toward the direction of travel
-    const rot = Math.atan2(p[0].y - p[1].y, p[0].x - p[1].x) + Math.PI / 2;
     if (!v.head) v.head = this.add.image(0, 0, key).setMask(this.mask);
-    v.head.setTexture(key).setDisplaySize(size * 1.05, size * 1.05).setPosition(p[0].x + v.g.x, p[0].y + v.g.y).setRotation(rot).setVisible(!v.hidden);
+    v.head.setTexture(key).setDisplaySize(size * 1.05, size * 1.05).setPosition(head.x + v.g.x, head.y + v.g.y).setRotation(rot).setVisible(!v.hidden);
     const accKey = accId ? `acc_${accId}` : '';
     if (accKey && has(this, accKey)) {
       if (!v.acc) v.acc = this.add.image(0, 0, accKey).setMask(this.mask);
@@ -428,19 +450,20 @@ export class LevelScene extends Phaser.Scene {
     }
     // portrait: over the top HUD; landscape: over the left panel. Never over the board.
     const land = isLand();
-    const bw = land ? 300 : W - 40;
-    const bh = land ? 300 : 150;
+    // landscape: exactly the chapter card's rect, so no edge of the card behind peeks out
+    const bw = land ? 304 : W - 40;
+    const bh = land ? 360 : 150;
     const home = land ? { x: 180, y: 340 } : { x: W / 2, y: 92 };
     const c = this.add.container(home.x, land ? H + 200 : -140).setDepth(60);
     const g = this.add.graphics();
     card(g, -bw / 2, -bh / 2, bw, bh, 26);
     const ix = land ? 0 : -bw / 2 + 75;
-    const iy = land ? -bh / 2 + 62 : 5;
+    const iy = land ? -bh / 2 + 70 : 5;
     const ic = k === 'scratchy' ? art(this, 'scratchy_warn', ix, iy, land ? 100 : 120, land ? 100 : 120) : null;
     const iconName = ({ hint: 'hint', sleepy: 'sleep', kitten: 'family', moony: 'star', boxes: 'box', hard: 'star', daily: 'daily' } as Record<string, string>)[k];
     const im = ic ?? (iconName ? icon(this, iconName as never, ix, iy, land ? 80 : 96) : null);
-    const tx = txt(this, land ? 0 : 40, land ? -16 : -28, t(`tip_${k}_t`), land ? 26 : 30);
-    const body = txt(this, land ? 0 : 40, land ? 8 : 22, t(`tip_${k}`), 20, C.muted).setWordWrapWidth(land ? bw - 30 : W - 230, true);
+    const tx = txt(this, land ? 0 : 40, land ? -8 : -28, t(`tip_${k}_t`), land ? 26 : 30);
+    const body = txt(this, land ? 0 : 40, land ? 18 : 22, t(`tip_${k}`), 20, C.muted).setWordWrapWidth(land ? bw - 30 : W - 230, true);
     if (land) body.setOrigin(0.5, 0);
     const close = txt(this, bw / 2 - 28, -bh / 2 + 26, '✕', 28, C.muted);
     c.add([g, ...(im ? [im] : []), tx, body, close]);
@@ -469,6 +492,7 @@ export class LevelScene extends Phaser.Scene {
       fish: () => this.wallet(),
       state: () => ({ ended: this.ended, blocked: this.blocked, cats: this.views.size, id: this.level.id, freeN: this.board.freeCats().length }),
       share: () => this.shareDaily(),
+      leap: () => { this.leapers = [0, 4, 9]; this.celebrate(() => undefined); },
       og: async () => {
         const { w, h } = this.level;
         const board = await snapshot(this, this.ox - 30, this.oy - 30, this.cs * w + 60, this.cs * h + 72);
@@ -565,12 +589,13 @@ export class LevelScene extends Phaser.Scene {
     this.tweens.add({ targets: v.zz, alpha: 0, y: '-=30', duration: 300, onComplete: () => v.zz?.destroy() });
     this.redraw(v);
     sfx.wake();
-    this.tweens.add({ targets: [v.g, v.head].filter(Boolean), y: '-=8', duration: 110, yoyo: true, repeat: 1 });
+    this.tweens.add({ targets: parts(v), y: '-=8', duration: 110, yoyo: true, repeat: 1 });
   }
 
   private exit(v: CatView, steps: number) {
     this.taps.push('exit');
     const cat = v.cat;
+    this.leapers.push(cat.breed);
     const kittens = this.board.remove(cat.id);
     this.exits++;
     if (cat.breed !== SCRATCHY) this.time.delayedCall(260, () => this.crawlScratchy());
@@ -587,7 +612,7 @@ export class LevelScene extends Phaser.Scene {
     // anticipation: a tiny pull back, then the stretch out
     this.tweens.add({
       targets: o, s: total, duration: 180 + total * 42, ease: 'Back.In', easeParams: [1.2],
-      onUpdate: () => this.redraw(v, this.pointsAt(tr, len, Math.max(0, o.s))),
+      onUpdate: () => this.redraw(v, tr, Math.max(0, o.s)),
       onComplete: () => this.gone(v),
     });
     v.mark?.destroy();
@@ -597,7 +622,7 @@ export class LevelScene extends Phaser.Scene {
       if (!kv) continue;
       this.time.delayedCall(250, () => {
         sfx.kitten();
-        this.tweens.add({ targets: [kv.g, kv.head].filter(Boolean), y: '-=10', duration: 120, yoyo: true, repeat: 1 });
+        this.tweens.add({ targets: parts(kv), y: '-=10', duration: 120, yoyo: true, repeat: 1 });
       });
     }
 
@@ -619,6 +644,7 @@ export class LevelScene extends Phaser.Scene {
     v.g.destroy();
     v.zz?.destroy();
     v.head?.destroy();
+    v.rope?.destroy();
     v.acc?.destroy();
     v.mark?.destroy();
     this.views.delete(v.cat.id);
@@ -640,7 +666,7 @@ export class LevelScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 0, duration: 260, yoyo: true, repeat: 1, onComplete: () => g.destroy() });
     if (blocker === BOX) return sfx.box();
     const bv = this.views.get(blocker);
-    if (bv) this.tweens.add({ targets: [bv.g, bv.head].filter(Boolean), x: '+=5', duration: 50, yoyo: true, repeat: 3 });
+    if (bv) this.tweens.add({ targets: parts(bv), x: '+=5', duration: 50, yoyo: true, repeat: 3 });
   }
 
   private countBlocked() {
@@ -658,12 +684,11 @@ export class LevelScene extends Phaser.Scene {
     if (ghost?.hidden) this.time.delayedCall(80 + steps * 30, () => this.reveal(ghost));
     else this.countBlocked();
     sfx.bonk();
-    const len = v.cat.cells.length;
     const tr = this.trajectory(v.cat, steps + 1);
     const o = { s: 0 };
     this.tweens.add({
       targets: o, s: steps + 0.35, duration: 80 + steps * 30, ease: 'Sine.InOut', yoyo: true,
-      onUpdate: () => this.redraw(v, this.pointsAt(tr, len, o.s)),
+      onUpdate: () => this.redraw(v, tr, o.s),
       onComplete: () => {
         v.busy = false;
         this.redraw(v);
@@ -683,8 +708,8 @@ export class LevelScene extends Phaser.Scene {
     v.hidden = false;
     v.mood = 'happy';
     this.redraw(v);
-    const targets = [v.g, v.head].filter(Boolean);
-    for (const o of targets) (o as Phaser.GameObjects.Components.Alpha).setAlpha(0);
+    const targets = parts(v);
+    for (const o of targets) (o as unknown as Phaser.GameObjects.Components.Alpha).setAlpha(0);
     this.tweens.add({ targets, alpha: 1, duration: 420 });
     const mid = this.px(v.cat.cells[Math.floor(v.cat.cells.length / 2)]);
     const fx = art(this, 'moony_reveal', mid.x, mid.y, this.cs * 2.4, this.cs * 2.4);
@@ -708,7 +733,7 @@ export class LevelScene extends Phaser.Scene {
     this.taps.push('bonk');
     this.countBlocked();
     sfx.meow(1.5);
-    this.tweens.add({ targets: [v.g, v.head].filter(Boolean), y: '-=6', duration: 90, yoyo: true, repeat: 1 });
+    this.tweens.add({ targets: parts(v), y: '-=6', duration: 90, yoyo: true, repeat: 1 });
     const mv = this.views.get(mother);
     if (mv) {
       mv.hint = true;
@@ -741,7 +766,7 @@ export class LevelScene extends Phaser.Scene {
     sfx.slide();
     this.tweens.add({
       targets: o, s: 1, duration: 280, ease: 'Sine.InOut',
-      onUpdate: () => this.redraw(v, this.pointsAt(tr, old.length, o.s)),
+      onUpdate: () => this.redraw(v, tr, o.s),
       onComplete: () => {
         v.busy = false;
         v.mood = 'calm';
@@ -815,7 +840,7 @@ export class LevelScene extends Phaser.Scene {
     v.hint = true;
     this.redraw(v);
     sfx.hint();
-    this.tweens.add({ targets: v.g, alpha: 0.55, duration: 250, yoyo: true, repeat: 3 });
+    this.tweens.add({ targets: parts(v), alpha: 0.55, duration: 250, yoyo: true, repeat: 3 });
     this.taps.push('hint');
     this.refreshUi();
     platform.track('booster_used', { type: 'hint' });
@@ -887,7 +912,53 @@ export class LevelScene extends Phaser.Scene {
       lines.unshift(t('chapterDone', { name: t('chapter_' + chapterKey(chapterOf(d.n))) }));
     } else if (d.mode === 'daily') sfx.daily();
     else sfx.win();
-    this.time.delayedCall(350, () => this.result(paws, total, lines));
+    this.celebrate(() => this.result(paws, total, lines));
+  }
+
+  /** Win: the last cats leap out of the board in an arc with sparkles, hearts and speed lines (art4). */
+  private celebrate(done: () => void) {
+    const keys = [...new Set(this.leapers.slice().reverse())].map((b) => `leap_${BREEDS[b].key}`).filter((k) => has(this, k)).slice(0, 3);
+    if (!keys.length) {
+      this.time.delayedCall(350, done);
+      return;
+    }
+    const { w, h } = this.level;
+    const cx = this.ox + (this.cs * w) / 2;
+    const cy = this.oy + (this.cs * h) / 2;
+    const size = Math.min(W, H) * 0.42;
+    const ring = art(this, 'vfx_hearts', cx, cy, size * 0.6, size * 0.6)?.setDepth(89).setAlpha(0.95);
+    if (ring) this.tweens.add({ targets: ring, scale: ring.scale * 2.2, alpha: 0, duration: 900, ease: 'Cubic.Out', onComplete: () => ring.destroy() });
+    keys.forEach((key, i) => this.time.delayedCall(i * 260, () => {
+      const right = i % 2 === 0;
+      const x0 = cx + (i - 1) * this.cs * 0.8;
+      const y0 = cy + this.cs * 0.5;
+      const x1 = right ? W + size : -size;
+      const y1 = -size * 0.3 + i * 60;
+      const puff = art(this, 'vfx_puff', x0, y0 + size * 0.15, size * 0.5, size * 0.5)?.setDepth(90);
+      if (puff) this.tweens.add({ targets: puff, scale: puff.scale * 1.6, alpha: 0, duration: 520, onComplete: () => puff.destroy() });
+      const cat = art(this, key, x0, y0, size, size)!.setDepth(92).setFlipX(!right);
+      const k = cat.scale;
+      cat.setScale(k * 0.3);
+      const lines = art(this, 'vfx_speed', x0, y0, size * 0.55, size * 0.55)?.setDepth(91).setFlipX(!right).setAlpha(0);
+      const o = { u: 0 };
+      this.tweens.add({
+        targets: o, u: 1, duration: 900, ease: 'Quad.In',
+        onUpdate: () => {
+          const u = o.u;
+          const x = x0 + (x1 - x0) * u;
+          const y = y0 + (y1 - y0) * u - Math.sin(u * Math.PI) * size * 0.45;
+          cat.setPosition(x, y).setScale(k * Math.min(1, 0.3 + u * 2.4)).setRotation((right ? 1 : -1) * (-0.35 + u * 0.5));
+          lines?.setPosition(x - (right ? 1 : -1) * size * 0.55, y + size * 0.05).setAlpha(Math.min(1, u * 4)).setRotation(cat.rotation);
+        },
+        onComplete: () => { cat.destroy(); lines?.destroy(); },
+      });
+      this.time.delayedCall(120, () => {
+        const sp = art(this, 'vfx_sparkle', x0, y0 - size * 0.1, size * 0.45, size * 0.45)?.setDepth(93);
+        if (sp) this.tweens.add({ targets: sp, scale: sp.scale * 1.7, angle: 40, alpha: 0, duration: 650, ease: 'Cubic.Out', onComplete: () => sp.destroy() });
+      });
+      sfx.meow(1 + i * 0.15);
+    }));
+    this.time.delayedCall(950 + (keys.length - 1) * 260, done);
   }
 
   /** Compact result: paws, fish, one or two lines; Continue first, Map second (GDD §4, §8.2). */

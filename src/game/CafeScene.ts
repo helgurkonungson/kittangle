@@ -55,10 +55,14 @@ export class CafeScene extends Phaser.Scene {
     }
     art(this, `cafe_room${r + 1}`, W / 2, 640, W, 960, true);
 
-    roundBtn(this, 60, 64, 84, S.pink, S.pinkLip, 'map', () => this.scene.start('Map'));
-    ribbon(this, W / 2 - 10, 64, 380, t('myCafe').toUpperCase(), 'cafe', 28);
-    chip(this, W - 84, 64, 124, 'star', () => String(save.stars));
-    title(this, W / 2, 132, `${t('chapter_' + CHAPTERS[roomChapter(save.tasksDone, r)].key)} · ${t('comfort', { n: comfort(save.cafe, save.cafeTier), r: tipsRate(save.cafe, save.cafeTier) })}`, 22);
+    // header stays above the decor (a hanging lamp must never cover it); the subtitle sits on a dark pill
+    roundBtn(this, 60, 64, 84, S.pink, S.pinkLip, 'map', () => this.scene.start('Map')).setDepth(40);
+    ribbon(this, W / 2 - 10, 64, 380, t('myCafe').toUpperCase(), 'cafe', 28).setDepth(40);
+    chip(this, W - 84, 64, 124, 'star', () => String(save.stars)).c.setDepth(40);
+    const sub = title(this, W / 2, 134, `${t('chapter_' + CHAPTERS[roomChapter(save.tasksDone, r)].key)} · ${t('comfort', { n: comfort(save.cafe, save.cafeTier), r: tipsRate(save.cafe, save.cafeTier) })}`, 21).setDepth(41);
+    const sw = Math.min(W - 40, sub.width + 36);
+    this.add.graphics().setDepth(40).fillStyle(0x4b2a86, 0.92).fillRoundedRect(W / 2 - sw / 2, 134 - 20, sw, 40, 20)
+      .lineStyle(3, C.inkN, 1).strokeRoundedRect(W / 2 - sw / 2, 134 - 20, sw, 40, 20);
     // room switch arrows: up on the wall, away from decor tap areas (see cafeLayout + layout test)
     const { prevRoom: pr, nextRoom: nr } = CAFE_UI;
     // room switch = labelled pills ("◀ Hall" / "Attic ▶"); a bare chevron read as the Back button
@@ -91,7 +95,11 @@ export class CafeScene extends Phaser.Scene {
         // tag badge sits on the item's top-right corner, not on the empty slot box
         const top = im ? im.y - im.displayHeight * im.originY : rect.y - rect.h / 2;
         const right = im ? im.x + im.displayWidth * 0.4 : rect.x + rect.w / 2 - 6;
-        txt(this, right, top + 14, TAG_ICON[tagOf(i, v)], 26);
+        // a small white badge, so it reads as a label and not as a toy lying on the furniture
+        const bx = Math.min(W - 26, right);
+        const by = Math.max(170, top + 10);
+        this.add.circle(bx, by, 19, 0xffffff, 0.95).setStrokeStyle(3, C.inkN).setDepth(5);
+        txt(this, bx, by, TAG_ICON[tagOf(i, v)], 22).setDepth(6);
         const hr = rect;
         const hit = this.add.zone(hr.x, hr.y, hr.w, hr.h).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this.pickVariant(i));
@@ -126,8 +134,8 @@ export class CafeScene extends Phaser.Scene {
       if (!art(this, 'trophy_shelf', 360, 590, 320, 90)) this.add.graphics().fillStyle(0xb98a5a, 1).fillRoundedRect(220, 585, 280, 18, 6).lineStyle(3, C.inkN, 1).strokeRoundedRect(220, 585, 280, 18, 6);
       save.trophies.forEach((tr, k) => art(this, `trophy_${tr}`, 255 + k * 70, 552, 62, 62) ?? txt(this, 255 + k * 70, 562, TROPHY_ICON[tr] ?? '🏆', 40));
     }
-    this.spawnCats();
     this.drawVisitor();
+    this.spawnCats();
     this.drawTaskPanel();
     this.chapterIntro();
     const tips = tipsAvailable(save.cafe, save.tips.since, Date.now(), save.cafeTier);
@@ -297,7 +305,8 @@ export class CafeScene extends Phaser.Scene {
     const vis = VISITORS.find((v) => v.breed === b)!;
     const vz0 = CAFE_UI.visitor;
     sittingCat(this, b, vz0.x, vz0.y, 120);
-    const bell = txt(this, vz0.x + 30, vz0.y - 60, '🔔', 40);
+    this.add.circle(vz0.x + 58, vz0.y - 52, 22, 0xffffff, 0.95).setStrokeStyle(3, C.inkN).setDepth(6);
+    const bell = txt(this, vz0.x + 58, vz0.y - 52, '🔔', 28).setDepth(7);
     this.tweens.add({ targets: bell, angle: 15, duration: 300, yoyo: true, repeat: -1 });
     const vz = CAFE_UI.visitor;
     const zone = this.add.zone(vz.x, vz.y, vz.w, vz.h).setInteractive({ useHandCursor: true });
@@ -325,13 +334,21 @@ export class CafeScene extends Phaser.Scene {
   }
 
   private spawnCats() {
-    const breeds = save.breeds.slice(0, 10);
-    // resident cats sit on the floor (back row first so nearer cats overlap them)
-    breeds
-      .map((b, i) => ({ b, i, x: 110 + ((i * 137) % 500), y: 960 + ((i * 89) % 80) }))
+    // fixed spots that never overlap each other, the tips button, the counter or the guest:
+    // the floor left of the counter, and the sofa seat when there is a sofa
+    const r = this.room;
+    const guest = save.visit.visitor >= 0;
+    const spots: { x: number; y: number; s: number }[] = [{ x: 80, y: 960, s: 118 }];
+    if (!guest) spots.push({ x: 196, y: 972, s: 118 }, { x: 312, y: 960, s: 118 });
+    const sofa = save.cafe[r][CAFE_SLOTS.indexOf('sofa')];
+    if (sofa >= 0) {
+      const p = placeOf(r, 'sofa', sofa);
+      spots.push({ x: p.x - p.w * 0.14, y: p.y - p.h * 0.02, s: 108 }, { x: p.x + p.w * 0.2, y: p.y - p.h * 0.02, s: 108 });
+    }
+    save.breeds.slice(0, spots.length)
+      .map((b, i) => ({ b, i, ...spots[i] }))
       .sort((a, z) => a.y - z.y)
-      .forEach(({ b, i, x, y }) => {
-        const size = 90 + (y - 960) * 0.2;
+      .forEach(({ b, i, x, y, s: size }) => {
         this.add.ellipse(x, y + size * 0.42, size * 0.7, size * 0.16, C.inkN, 0.12);
         const cat = sittingCat(this, b, x, y, size);
         if (i % 2) cat.setScale(-cat.scaleX, cat.scaleY);

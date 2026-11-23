@@ -47,11 +47,10 @@ export class MapScene extends Phaser.Scene {
 
     const done = Math.max(0, Math.min(CHAPTER_LEN, save.level - first));
     const name = first <= CAMPAIGN_LEVELS ? t('chapter_' + chapterKey(ch)) : t('endless');
-    ribbon(this, W / 2, 62, land ? 560 : 500, name.toUpperCase(), 'paw', 30);
+    ribbon(this, land ? W / 2 : 322, 62, land ? 560 : 400, name.toUpperCase(), 'paw', name.length > 16 && !land ? 26 : 30);
     pawBar(this, W / 2 + 20, 140, 230, done, CHAPTER_LEN);
     roundBtn(this, 56, 56, 76, S.purpleBtn, S.purpleLip, 'back', () => this.scene.start('Title'));
-    if (land) chip(this, W - 100, 56, 160, 'fish', () => String(save.fish));
-    else chip(this, W - 100, 210, 160, 'fish', () => String(save.fish));
+    chip(this, land ? W - 100 : W - 92, land ? 56 : 62, land ? 160 : 150, 'fish', () => String(save.fish));
     if (ch > 0) roundBtn(this, W / 2 - 190, 140, 60, S.lavDeep, S.purpleLip, '◀', () => this.scene.restart({ ch: ch - 1 }));
     if (save.level > first + CHAPTER_LEN - 1) roundBtn(this, W / 2 + 230, 140, 60, S.lavDeep, S.purpleLip, '▶', () => this.scene.restart({ ch: ch + 1 }));
 
@@ -65,10 +64,13 @@ export class MapScene extends Phaser.Scene {
     const dailyOpen = save.level >= DAILY_FROM_LEVEL;
     const task = nextTask(save.tasksDone);
     const giftReady = save.level > 1 && save.calendar.last !== today;
+    // the streak lives on the Daily button label, never as loose text over the road
+    const st = streakState(save.daily.last, save.daily.streak, today);
+    const flame = st.alive && dailyOpen ? ` 🔥${st.streak}` : '';
     const items: [IconName, string, number, number, () => void, boolean][] = [
       ['cafe', t('cafe'), S.pink, S.pinkLip, () => this.scene.start('Cafe'), !!task && save.stars >= task.cost],
       ['collection', t('collection'), 0x22c3e6, 0x1590a8, () => this.scene.start('Collection'), false],
-      [dailyOpen ? 'daily' : 'lock', t('dailyShort'), S.yellow, S.yellowLip, () => {
+      [dailyOpen ? 'daily' : 'lock', t('dailyShort') + flame, S.yellow, S.yellowLip, () => {
         if (!dailyOpen) return toast(this, t('dailyLocked', { n: DAILY_FROM_LEVEL - 1 }));
         this.scene.start('Level', { mode: 'daily', date: today });
       }, dailyOpen && !save.daily.results[today]],
@@ -81,12 +83,11 @@ export class MapScene extends Phaser.Scene {
       const x = land ? (i < 3 ? 90 : W - 90) : W / 2 + (i - 2) * 132;
       const y = land ? (i < 3 ? 250 + i * 150 : 250 + (i - 3) * 150) : 1170;
       const b = roundBtn(this, x, y, land ? 92 : 96, col, lip, ic, fn);
-      title(this, x, y + 64, label, 20);
+      const l = title(this, x, y + 64, label, 20);
+      if (ic === 'daily' && st.atRisk) l.setColor('#ffd84a');
       if (dot) badge(this, b, 34, -34);
     });
 
-    const st = streakState(save.daily.last, save.daily.streak, today);
-    if (st.alive && dailyOpen) title(this, W / 2, land ? H - 128 : 950, st.atRisk ? t('streakRisk', { n: st.streak }) : t('streakFlame', { n: st.streak }), 22, st.atRisk ? '#ffd84a' : '#ffffff');
 
     if (save.level > CHAPTER_LEN && !save.feedback.asked) this.time.delayedCall(500, () => this.feedback(true));
     else this.offerChallenge(today);
@@ -151,9 +152,13 @@ export class MapScene extends Phaser.Scene {
       c.add(title(this, 0, ty, label, n > 99 ? 24 : state === 'current' ? 34 : 28).setStroke(state === 'locked' ? '#7a5aa6' : '#39243f', 6));
       if (state === 'done') c.add(icon(this, 'paw', 0, r * 0.48, r * 0.6).setAlpha((save.best[n] ?? 1) === 3 ? 1 : 0.7));
       if (state === 'locked') c.add(icon(this, 'lock', 0, r * 0.5, r * 0.55));
-      if (isMilestone(n)) c.add(icon(this, 'chest', r * 0.8, -r * 0.85, 52));
+      // badges sit outside the circle so they never cover the number
+      if (isMilestone(n)) c.add(icon(this, 'chest', r * 1.12, -r * 1.02, 44));
       const lesson = LESSON_AT.get(n);
-      if (lesson) c.add(icon(this, lesson, -r * 0.85, -r * 0.85, 42));
+      if (lesson) {
+        c.add(this.add.circle(-r * 1.1, -r * 1.0, 22, 0xffffff, 1).setStrokeStyle(3, C.inkN));
+        c.add(icon(this, lesson, -r * 1.1, -r * 1.0, 34));
+      }
       if (state === 'current') {
         this.tweens.add({ targets: c, scale: 1.08, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
         // the board of the next level is generated while the player looks at the map
