@@ -4,8 +4,41 @@ import { has, SPEAKER_ART } from './art';
 import { sfx } from './sfx';
 import { icon, IconName } from './icons';
 
-export const W = 720;
-export const H = 1280;
+/** Design resolution: 720×1280 in portrait, 1280×720 on landscape screens (desktop, tablets). */
+export let W = 720;
+export let H = 1280;
+export const isLand = () => W > H;
+/** real orientation of the canvas (W/H can be portrait inside a landscape canvas, see portraitColumn) */
+export let screenLand = false;
+export function setOrientation(land: boolean) {
+  screenLand = land;
+  W = land ? 1280 : 720;
+  H = land ? 720 : 1280;
+}
+
+/**
+ * Scenes drawn only for portrait (café, event): on a landscape canvas they keep the 720×1280 layout and
+ * are shown as a centered column; the camera zooms out and the sides show the violet stage color.
+ */
+export function portraitColumn(sc: Phaser.Scene) {
+  if (!screenLand) return;
+  W = 720;
+  H = 1280;
+  const cam = sc.cameras.main;
+  cam.setZoom(720 / 1280);
+  cam.centerOn(360, 640);
+  cam.setBackgroundColor(0x7a4ae0);
+  // violet stage on the sides (world space left and right of the 720-wide column)
+  const g = sc.add.graphics().setDepth(-1000);
+  g.fillGradientStyle(0x8b5cf6, 0xc04fe0, 0x6d3fd4, 0x8b5cf6, 1).fillRect(-900, 0, 2520, 1280);
+  for (let i = 0; i < 14; i++) {
+    const x = i % 2 ? -100 - ((i * 137) % 700) : 820 + ((i * 211) % 700);
+    g.fillStyle(0xffffff, 0.06 + (i % 4) * 0.03).fillCircle(x, (i * 389) % 1280, 40 + ((i * 53) % 90));
+  }
+  sc.events.once('shutdown', () => setOrientation(screenLand));
+}
+/** Landscape when the window is clearly wider than tall. */
+export const wantsLand = () => window.innerWidth > window.innerHeight * 1.15;
 export const FONT = '"Nunito", "Trebuchet MS", "Segoe UI", Arial, sans-serif';
 
 /**
@@ -140,7 +173,7 @@ export function toast(s: Phaser.Scene, msg: string, y = 230) {
     prev.forEach((o) => o.destroy());
   }
   const t = txt(s, W / 2, y, msg, 30, '#fff9f0').setDepth(200);
-  t.setWordWrapWidth(W - 120, true);
+  t.setWordWrapWidth(Math.min(W, 720) - 120, true);
   const bg = s.add.graphics().setDepth(199);
   s.data.set('toast', [t, bg]);
   s.tweens.add({ targets: t, scale: { from: 1.15, to: 1 }, duration: 120 });
@@ -174,22 +207,25 @@ function scrim(s: Phaser.Scene, alpha = 0.55) {
  */
 export function modal(s: Phaser.Scene, title: string, lines: string[], buttons: ModalBtn[], closable = false) {
   const c = s.add.container(0, 0).setDepth(100);
+  // the window keeps the portrait width, centered on landscape screens
+  const MW = Math.min(W, 720);
+  const L = (W - MW) / 2;
   const dim = scrim(s);
   const close = () => c.destroy();
   const box = { y: 0, h: 0 };
   if (closable)
     dim.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (p.y < box.y || p.y > box.y + box.h || p.x < 60 || p.x > W - 60) close();
+      if (p.y < box.y || p.y > box.y + box.h || p.x < L + 60 || p.x > L + MW - 60) close();
     });
   const ph0 = 190 + lines.length * 52 + buttons.length * 118;
   let top = H / 2 - ph0 / 2;
   const g = s.add.graphics();
   const tt = txt(s, W / 2, 0, title, 46);
-  const maxTitle = closable ? W - 260 : W - 180;
+  const maxTitle = closable ? MW - 260 : MW - 180;
   if (tt.width > maxTitle) tt.setScale(maxTitle / tt.width);
   c.add([dim, g, tt]);
   // lines may wrap: stack them by their real height
-  const texts = lines.map((l) => txt(s, W / 2, 0, l, 32).setWordWrapWidth(W - 180, true).setOrigin(0.5, 0));
+  const texts = lines.map((l) => txt(s, W / 2, 0, l, 32).setWordWrapWidth(MW - 180, true).setOrigin(0.5, 0));
   const extra = texts.reduce((n, tx) => n + Math.max(0, tx.height - 44), 0);
   top -= extra / 2;
   let ly = top + 128;
@@ -197,14 +233,14 @@ export function modal(s: Phaser.Scene, title: string, lines: string[], buttons: 
   c.add(texts);
   const by = top + 160 + lines.length * 52 + extra + 46;
   const ph = ph0 + extra;
-  panel(g, 60, top, W - 120, ph, 40);
-  g.fillStyle(C.latte, 1).fillRoundedRect(63, top + 3, W - 126, 104, { tl: 37, tr: 37, bl: 0, br: 0 });
-  g.lineStyle(3, 0xe3cbe8, 1).lineBetween(64, top + 107, W - 64, top + 107);
+  panel(g, L + 60, top, MW - 120, ph, 40);
+  g.fillStyle(C.latte, 1).fillRoundedRect(L + 63, top + 3, MW - 126, 104, { tl: 37, tr: 37, bl: 0, br: 0 });
+  g.lineStyle(3, 0xe3cbe8, 1).lineBetween(L + 64, top + 107, L + MW - 64, top + 107);
   tt.y = top + 56;
   box.y = top;
   box.h = ph;
   if (closable) {
-    const x = s.add.container(W - 84, top + 56);
+    const x = s.add.container(L + MW - 84, top + 56);
     const xg = s.add.graphics();
     xg.fillStyle(C.coral, 1).fillCircle(0, 0, 30).lineStyle(4, C.inkN, 1).strokeCircle(0, 0, 30);
     const xt = txt(s, 0, -2, '✕', 30, '#ffffff');
@@ -217,8 +253,8 @@ export function modal(s: Phaser.Scene, title: string, lines: string[], buttons: 
       color: b.color, disabled: b.disabled, size: i === 0 ? 36 : 32,
     })),
   );
-  c.setScale(0.9).setAlpha(0);
-  s.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 180, ease: 'Back.Out' });
+  c.setAlpha(0).setY(30);
+  s.tweens.add({ targets: c, y: 0, alpha: 1, duration: 180, ease: 'Back.Out' });
   return close;
 }
 

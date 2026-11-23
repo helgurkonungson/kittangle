@@ -6,7 +6,7 @@ import { utcDate } from '../core/levels';
 import { rewardText } from '../core/retention';
 import { t } from '../i18n';
 import { save } from './state';
-import { C, txt, W, backButton, panel } from './ui';
+import { C, txt, W, backButton, panel, portraitColumn } from './ui';
 
 /** Weekly event track + season progress. Rewards are paid automatically when paws reach a step. */
 export class EventScene extends Phaser.Scene {
@@ -15,6 +15,7 @@ export class EventScene extends Phaser.Scene {
   }
 
   create() {
+    portraitColumn(this);
     this.time.delayedCall(350, () => tipOnce(this, 'event'));
     const e = eventAt(utcDate());
     const cur = save.event.id === e.id;

@@ -29,7 +29,7 @@ export class PreloadScene extends Phaser.Scene {
       const dev = Number(new URLSearchParams(location.search).get('play')); // dev: ?play=14 opens a level
       if (dev > 0) this.scene.start('Level', { mode: 'level', n: dev });
       else if (save.level === 1 && !save.best[1]) this.scene.start('Level', { mode: 'level', n: 1 });
-      else this.scene.start('Map');
+      else this.scene.start('Title');
     };
     if (!keys.length) return go();
     for (const k of keys) this.load.image(k, BASE + m[k]);

@@ -10,7 +10,8 @@ import { art, sittingCat } from './art';
 import { playMusic, sfx } from './sfx';
 import { rewarded, rewardedReady } from './ads';
 import { addFish, grantPaws, persist, platform, save, unlockBreed } from './state';
-import { button, C, dialog, modal, pill, toast, txt, W, backButton, panel } from './ui';
+import { button, C, dialog, modal, portraitColumn, toast, txt, W, panel } from './ui';
+import { chip, ribbon, roundBtn, S, title } from './style';
 
 import { CAFE_UI, type Rect, placeOf } from './cafeLayout';
 
@@ -38,6 +39,7 @@ export class CafeScene extends Phaser.Scene {
   }
 
   create() {
+    portraitColumn(this);
     this.time.delayedCall(350, () => tipOnce(this, 'cafe'));
     playMusic('music_cafe');
     const r = this.room;
@@ -53,10 +55,10 @@ export class CafeScene extends Phaser.Scene {
     }
     art(this, `cafe_room${r + 1}`, W / 2, 640, W, 960, true);
 
-    backButton(this, () => this.scene.start('Map'));
-    txt(this, W / 2, 70, t('chapter_' + CHAPTERS[roomChapter(save.tasksDone, r)].key), 34);
-    pill(this, W - 24, 64, 'star', () => save.stars, 130);
-    txt(this, W / 2, 128, t('comfort', { n: comfort(save.cafe, save.cafeTier), r: tipsRate(save.cafe, save.cafeTier) }), 24);
+    roundBtn(this, 60, 64, 84, S.pink, S.pinkLip, 'map', () => this.scene.start('Map'));
+    ribbon(this, W / 2 - 10, 64, 380, t('myCafe').toUpperCase(), 'cafe', 28);
+    chip(this, W - 84, 64, 124, 'star', () => String(save.stars));
+    title(this, W / 2, 132, `${t('chapter_' + CHAPTERS[roomChapter(save.tasksDone, r)].key)} · ${t('comfort', { n: comfort(save.cafe, save.cafeTier), r: tipsRate(save.cafe, save.cafeTier) })}`, 22);
     // room switch arrows: up on the wall, away from decor tap areas (see cafeLayout + layout test)
     const { prevRoom: pr, nextRoom: nr } = CAFE_UI;
     // room switch = labelled pills ("◀ Hall" / "Attic ▶"); a bare chevron read as the Back button

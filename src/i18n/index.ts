@@ -268,6 +268,8 @@ const ru = {
   pawsPerfect: "Без единой ошибки!",
   pawsHint: "Меньше ошибок, больше лапок",
   adDoubleShort: "×2 за рекламу",
+  tagline: "Помоги котикам выбраться!",
+  myCafe: "Мое кошачье кафе",
 };
 
 type Dict = typeof ru;
@@ -542,6 +544,8 @@ const en: Dict = {
   pawsPerfect: "Not a single mistake!",
   pawsHint: "Fewer mistakes, more paws",
   adDoubleShort: "×2 for an ad",
+  tagline: "Help the cats slip out!",
+  myCafe: "My Cat Café",
 };
 
 import es from './locales/es.json';

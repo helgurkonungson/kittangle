@@ -16,8 +16,8 @@ import { playMusic, sfx } from './sfx';
 import { betweenLevels, rewarded, rewardedReady } from './ads';
 import { addFish, grantPaws, persist, platform, save, unlockBreed } from './state';
 import { PAWS } from '../core/live';
-import { boardBackground } from './boardTheme';
-import { button, C, fishLabel, H, toast, txt, W, backButton, panel, DIM } from './ui';
+import { candy, card, chip, pawBar, roundBtn, S, stage, title } from './style';
+import { button, C, H, toast, txt, W, DIM, isLand } from './ui';
 import { icon } from './icons';
 import { fmtTime, Tap } from '../core/share';
 import { challenge, drawCard, prepareDailyShare, snapshot } from './share';
@@ -63,7 +63,8 @@ export class LevelScene extends Phaser.Scene {
   private boardShot: Promise<HTMLImageElement | null> = Promise.resolve(null);
   private pawIcons: Phaser.GameObjects.Image[] = [];
   private timerText?: Phaser.GameObjects.Text;
-  private fish!: { refresh: () => void };
+  private fishChip!: { c: Phaser.GameObjects.Container; refresh: () => void };
+  private mascot?: Phaser.GameObjects.Image;
   private hintBtn!: Phaser.GameObjects.Container;
   private mask!: Phaser.Display.Masks.GeometryMask;
   private scratchyUntil = 0;
@@ -96,6 +97,7 @@ export class LevelScene extends Phaser.Scene {
     this.preview = undefined;
     this.previewId = -1;
     this.freeHint = false;
+    this.mascot = undefined;
   }
 
   create() {
@@ -105,13 +107,12 @@ export class LevelScene extends Phaser.Scene {
     const { w, h } = this.level;
     this.cameras.main.setBackgroundColor(C.bg);
 
-    const top = 200;
-    const bottom = 200;
-    const availW = W - 40;
-    const availH = H - top - bottom;
-    this.cs = Math.floor(Math.min(availW / w, availH / h, 110));
-    this.ox = Math.round((W - this.cs * w) / 2);
-    this.oy = Math.round(top + (availH - this.cs * h) / 2);
+    // board area: center column between the info panel and Scratchy in landscape, under the HUD in portrait
+    const land = isLand();
+    const A = land ? { x: 360, y: 46, w: W - 360 - 250, h: H - 92 } : { x: 28, y: 240, w: W - 56, h: H - 240 - 230 };
+    this.cs = Math.floor(Math.min(A.w / w, A.h / h, 110));
+    this.ox = Math.round(A.x + (A.w - this.cs * w) / 2);
+    this.oy = Math.round(A.y + (A.h - this.cs * h) / 2);
     this.drawField();
     // cats sliding off the board are clipped to the field so they never cover the HUD
     const mg = this.make.graphics({}, false);
@@ -187,23 +188,16 @@ export class LevelScene extends Phaser.Scene {
 
   private drawField() {
     const { w, h } = this.level;
-    const n = this.d.mode === 'level' ? this.d.n : 1;
-    art(this, boardBackground(n), W / 2, H / 2, W, H, true);
+    stage(this);
     const g = this.add.graphics();
-    const bx = this.ox - 16;
-    const by = this.oy - 16;
-    const bw = this.cs * w + 32;
-    const bh = this.cs * h + 32;
-    // calm light board in a bright frame (GDD §12: saturation in accents, calm center)
-    g.fillStyle(C.inkN, 0.18).fillRoundedRect(bx + 4, by + 14, bw, bh, 30);
-    g.fillStyle(0xe7d3f2, 1).fillRoundedRect(bx, by + 8, bw, bh, 30);
-    g.fillStyle(C.panel, 1).fillRoundedRect(bx, by, bw, bh, 30);
-    g.lineStyle(5, C.inkN, 1).strokeRoundedRect(bx, by, bw, bh + 8, 30);
+    const pad = Math.max(14, this.cs * 0.28);
+    card(g, this.ox - pad, this.oy - pad, this.cs * w + pad * 2, this.cs * h + pad * 2, 34, 0xf3e6ff, S.lavDeep);
+    g.fillStyle(0xfff6ea, 1).fillRoundedRect(this.ox - 6, this.oy - 6, this.cs * w + 12, this.cs * h + 12, 18);
     const r = Math.max(4, this.cs * 0.12);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const p = this.px({ x, y });
-      const s = this.cs - 4;
-      g.fillStyle((x + y) % 2 ? 0xf6ead8 : 0xfff4e4, 1).fillRoundedRect(p.x - s / 2, p.y - s / 2, s, s, r);
+      const sz = this.cs - 5;
+      g.fillStyle((x + y) % 2 ? 0xf7ead8 : 0xfdf2e2, 1).fillRoundedRect(p.x - sz / 2, p.y - sz / 2, sz, sz, r);
     }
     for (const b of this.level.boxes) {
       const p = this.px(b);
@@ -265,44 +259,82 @@ export class LevelScene extends Phaser.Scene {
 
   private drawHud() {
     const d = this.d;
-    backButton(this, () => this.leave());
-    const title = d.mode === 'daily'
-      ? t('dailyTitle', { n: dailyNumber(d.date) })
-      : t(this.level.hard ? 'hardLevel' : 'level', { n: d.n });
-    const tt = txt(this, W / 2, 46, title, 40);
-    if (tt.width > 300) tt.setScale(300 / tt.width);
-    if (this.level.hard) tt.setColor('#ff3d9a');
-    if (d.mode === 'level') {
-      const ch = chapterOf(d.n);
-      const sub = d.n <= CAMPAIGN_LEVELS
-        ? t('chapterProgress', { name: t('chapter_' + chapterKey(ch)), a: stepOf(d.n), b: CHAPTER_LEN })
-        : t('endless');
-      const st = txt(this, W / 2, 92, sub, 24, C.muted);
-      if (st.width > 330) st.setScale(330 / st.width);
+    const land = isLand();
+    const name = d.mode === 'daily' ? t('dailyTitle', { n: dailyNumber(d.date) })
+      : d.n <= CAMPAIGN_LEVELS ? t('chapter_' + chapterKey(chapterOf(d.n))) : t('endless');
+    const lvl = d.mode === 'daily' ? t('dailyShort') : t(this.level.hard ? 'hardLevel' : 'level', { n: d.n });
+    const restart = () => {
+      platform.track('level_restart', { id: this.level.id });
+      this.scene.restart(this.d);
+    };
+    let hintX: number;
+    let hintY: number;
+    if (land) {
+      // left info panel: logo, chapter card, round buttons (style board 2026-11-23)
+      art(this, 'logo', 180, 78, 300, 130) ?? title(this, 180, 78, 'Kittangle', 56, '#ffd84a');
+      const g = this.add.graphics();
+      card(g, 28, 160, 304, 360, 30);
+      icon(this, 'cafe', 76, 212, 62);
+      const nt = txt(this, 200, 212, name, 26).setWordWrapWidth(180, true);
+      if (nt.height > 70) nt.setScale(70 / nt.height);
+      this.levelPill(180, 282, 250, lvl);
+      this.fishChip = chip(this, 180, 408, 150, 'fish', () => String(save.fish + this.earned));
+      if (d.mode === 'level') pawBar(this, 196, 346, 210, Math.max(0, stepOf(d.n) - 1), CHAPTER_LEN);
+      this.pawIcons = [0, 1, 2].map((i) => icon(this, 'paw', 180 + (i - 1) * 54, 474, 46));
+      roundBtn(this, 76, 600, 86, S.purpleBtn, S.purpleLip, 'map', () => this.leave());
+      roundBtn(this, 180, 600, 86, S.pink, S.pinkLip, '↻', restart);
+      hintX = 284;
+      hintY = 600;
+      // Scratchy hangs around on the right and reacts to the board
+      this.mascot = art(this, 'scratchy_idle', W - 128, H + 6, 300, 330)?.setOrigin(0.5, 1) ?? undefined;
+      if (this.mascot) this.tweens.add({ targets: this.mascot, y: H + 18, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    } else {
+      roundBtn(this, 66, 70, 84, S.purpleBtn, S.purpleLip, 'map', () => this.leave());
+      this.levelPill(W / 2, 70, 270, lvl);
+      this.fishChip = chip(this, W - 100, 70, 150, 'fish', () => String(save.fish + this.earned));
+      const nt = title(this, W / 2, 138, name, 24);
+      if (nt.width > 380) nt.setScale(380 / nt.width);
+      if (d.mode === 'level') pawBar(this, W / 2 - 50, 194, 260, Math.max(0, stepOf(d.n) - 1), CHAPTER_LEN);
+      this.pawIcons = [0, 1, 2].map((i) => icon(this, 'paw', W - 150 + i * 44, 194, 40));
+      roundBtn(this, W / 2 - 120, H - 110, 96, S.pink, S.pinkLip, '↻', restart);
+      hintX = W / 2 + 40;
+      hintY = H - 110;
     }
-    // paws this attempt is worth: one drops after the 1st and the 3rd blocked attempt
-    this.pawIcons = [0, 1, 2].map((i) => icon(this, 'paw', W / 2 + (i - 1) * 50, 140, 44));
-    this.fish = fishLabel(this, W - 24, 64, () => save.fish + this.earned);
     if (d.mode === 'daily') {
-      icon(this, 'clock', W - 150, 140, 34);
-      this.timerText = txt(this, W - 128, 141, '', 28).setOrigin(0, 0.5);
+      const tx = land ? 180 : W / 2 - 50;
+      const ty = land ? 346 : 194;
+      icon(this, 'clock', tx - 70, ty, 34);
+      this.timerText = title(this, tx + 10, ty, '', 28);
       const ch = challenge();
-      if (ch && ch.date === d.date) txt(this, 24, 141, t('challengeTarget', { t: fmtTime(ch.time) }), 26, '#ff3d9a').setOrigin(0, 0.5);
+      if (ch && ch.date === d.date) title(this, land ? 180 : W / 2, land ? 530 : 236, t('challengeTarget', { t: fmtTime(ch.time) }), 22, '#ffd84a');
       const { w, h } = this.level;
       this.boardShot = new Promise((res) => this.time.delayedCall(80, () =>
         snapshot(this, this.ox - 30, this.oy - 30, this.cs * w + 60, this.cs * h + 72).then(res)));
     }
     // the only booster: hint (GDD §11.1); the first one after its tip is free
     this.freeHint = d.mode === 'level' && !save.tipsSeen.includes('hint');
-    this.hintBtn = button(this, W / 2, H - 112, 330, 100, t('hint'), () => this.useHint(), { color: C.blue, size: 32, icon: 'hint' });
+    this.hintBtn = roundBtn(this, hintX, hintY, land ? 86 : 110, S.yellow, S.yellowLip, 'hint', () => this.useHint());
     const g = this.add.graphics();
-    g.fillStyle(C.inkN, 1).fillRoundedRect(-70, 42, 140, 44, 22);
-    g.fillStyle(C.panel, 1).fillRoundedRect(-67, 45, 134, 38, 19);
-    const price = txt(this, 14, 65, String(COST.hint), 26);
-    const fi = icon(this, 'fish', -36, 64, 38);
+    const bw = 96;
+    const by = (land ? 43 : 55) + 8;
+    g.fillStyle(C.inkN, 1).fillRoundedRect(-bw / 2 - 3, by - 3, bw + 6, 40, 20);
+    g.fillStyle(0xffffff, 1).fillRoundedRect(-bw / 2, by, bw, 34, 17);
+    const price = txt(this, 12, by + 17, String(COST.hint), 22);
+    const fi = icon(this, 'fish', -24, by + 17, 34);
     this.hintBtn.add([g, fi, price]);
     this.hintBtn.setData('price', price).setData('fish', fi);
     this.refreshUi();
+  }
+
+  /** Violet "LEVEL 8" plate. */
+  private levelPill(x: number, y: number, w: number, label: string) {
+    const g = this.add.graphics();
+    g.fillStyle(C.inkN, 1).fillRoundedRect(x - w / 2 - 3, y - 29, w + 6, 64, 30);
+    g.fillStyle(S.purpleLip, 1).fillRoundedRect(x - w / 2, y - 26 + 5, w, 52, 26);
+    g.fillStyle(S.purpleBtn, 1).fillRoundedRect(x - w / 2, y - 26, w, 52, 26);
+    const tt = title(this, x, y - 1, label.toUpperCase(), 28);
+    if (tt.width > w - 30) tt.setScale((w - 30) / tt.width);
+    if (this.level.hard) tt.setColor('#ffd84a');
   }
 
   private wallet() {
@@ -320,11 +352,11 @@ export class LevelScene extends Phaser.Scene {
   }
 
   private refreshUi() {
-    this.fish.refresh();
+    this.fishChip.refresh();
     const price = this.hintBtn.getData('price') as Phaser.GameObjects.Text;
     (this.hintBtn.getData('fish') as Phaser.GameObjects.Image).setVisible(!this.freeHint);
-    price.setText(this.freeHint ? t('free') : String(COST.hint)).setX(this.freeHint ? 0 : 14);
-    if (price.width > 124) price.setScale(124 / price.width);
+    price.setText(this.freeHint ? t('free') : String(COST.hint)).setX(this.freeHint ? 0 : 12);
+    if (price.width > 88) price.setScale(88 / price.width);
     else price.setScale(1);
     this.hintBtn.setAlpha(this.freeHint || this.wallet() >= COST.hint ? 1 : 0.55);
   }
@@ -363,8 +395,10 @@ export class LevelScene extends Phaser.Scene {
     this.tweens.add({ targets: a, alpha: 0.35, duration: 500, yoyo: true, repeat: -1 });
     const hand = txt(this, mid.x + 30, mid.y + 50, '👆', 64).setDepth(41);
     this.tweens.add({ targets: hand, x: mid.x + 10, y: mid.y + 30, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    const label = txt(this, W / 2, H - 230, t('tut1'), 30).setDepth(41).setStroke('#fff8ef', 8);
-    if (label.width > W - 60) label.setScale((W - 60) / label.width);
+    const land = isLand();
+    const label = title(this, land ? 180 : W / 2, land ? 540 : H - 200, t('tut1'), land ? 24 : 30).setDepth(41);
+    if (land) label.setWordWrapWidth(300, true);
+    else if (label.width > W - 60) label.setScale((W - 60) / label.width);
     this.cue = [a, hand, label];
   }
 
@@ -382,22 +416,29 @@ export class LevelScene extends Phaser.Scene {
       save.tipsSeen.push(k);
       persist();
     }
-    const c = this.add.container(W / 2, -140).setDepth(60);
+    // portrait: over the top HUD; landscape: over the left panel. Never over the board.
+    const land = isLand();
+    const bw = land ? 300 : W - 40;
+    const bh = land ? 300 : 150;
+    const home = land ? { x: 180, y: 340 } : { x: W / 2, y: 92 };
+    const c = this.add.container(home.x, land ? H + 200 : -140).setDepth(60);
     const g = this.add.graphics();
-    panel(g, -W / 2 + 20, -70, W - 40, 150, 28);
-    const ic = k === 'scratchy' ? art(this, 'scratchy_warn', -W / 2 + 95, 5, 120, 120) : null;
+    card(g, -bw / 2, -bh / 2, bw, bh, 26);
+    const ix = land ? 0 : -bw / 2 + 75;
+    const iy = land ? -bh / 2 + 62 : 5;
+    const ic = k === 'scratchy' ? art(this, 'scratchy_warn', ix, iy, land ? 100 : 120, land ? 100 : 120) : null;
     const iconName = ({ hint: 'hint', sleepy: 'sleep', kitten: 'family', boxes: 'box', hard: 'star', daily: 'daily' } as Record<string, string>)[k];
-    const im = ic ?? (iconName ? icon(this, iconName as never, -W / 2 + 95, 5, 96) : null);
-    const tx = txt(this, 40, -28, t(`tip_${k}_t`), 30).setOrigin(0.5, 0.5);
-    const body = txt(this, 40, 22, t(`tip_${k}`), 22, C.muted).setWordWrapWidth(W - 230, true);
-    const close = txt(this, W / 2 - 50, -42, '✕', 30, C.muted);
+    const im = ic ?? (iconName ? icon(this, iconName as never, ix, iy, land ? 80 : 96) : null);
+    const tx = txt(this, land ? 0 : 40, land ? 10 : -28, t(`tip_${k}_t`), land ? 26 : 30);
+    const body = txt(this, land ? 0 : 40, land ? 80 : 22, t(`tip_${k}`), 20, C.muted).setWordWrapWidth(land ? bw - 30 : W - 230, true);
+    const close = txt(this, bw / 2 - 28, -bh / 2 + 26, '✕', 28, C.muted);
     c.add([g, ...(im ? [im] : []), tx, body, close]);
-    c.setSize(W - 40, 150).setInteractive();
-    this.tweens.add({ targets: c, y: 92, duration: 280, ease: 'Back.Out' }); // over the HUD, never over the board
+    c.setSize(bw, bh).setInteractive();
+    this.tweens.add({ targets: c, y: home.y, duration: 280, ease: 'Back.Out' });
     const hide = () => {
       if (!c.active) return;
       c.disableInteractive();
-      this.tweens.add({ targets: c, y: -160, duration: 220, onComplete: () => c.destroy() });
+      this.tweens.add({ targets: c, y: isLand() ? H + 200 : -160, duration: 220, onComplete: () => c.destroy() });
     };
     c.on('pointerdown', (_p: unknown, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => { ev.stopPropagation(); hide(); });
     this.time.delayedCall(k === 'scratchy' || k === 'kitten' ? 8000 : 6000, hide);
@@ -577,7 +618,7 @@ export class LevelScene extends Phaser.Scene {
   private countBlocked() {
     this.blocked++;
     this.updatePaws();
-    if (this.blocked === 1 && this.d.mode === 'level' && this.d.n <= 4) toast(this, t('tut2'), H - 240);
+    if (this.blocked === 1 && this.d.mode === 'level' && this.d.n <= 4) toast(this, t('tut2'), isLand() ? H - 40 : H - 240);
   }
 
   private bonk(v: CatView, steps: number, blocker: number) {
@@ -622,7 +663,7 @@ export class LevelScene extends Phaser.Scene {
         this.redraw(mv);
       });
     }
-    toast(this, t('kittenWait'), H - 240);
+    toast(this, t('kittenWait'), isLand() ? H - 40 : H - 240);
   }
 
   /** Scratchy blocked: a playful paw swipe toward the tap, the blocker is revealed. No penalty but paws. */
@@ -663,6 +704,14 @@ export class LevelScene extends Phaser.Scene {
 
   /** Scratchy peeks in from the bottom-left corner (never over the board center). */
   private scratchyPop(key: string, sound?: () => void) {
+    if (this.mascot) {
+      const m = this.mascot;
+      sound?.();
+      if (has(this, key)) m.setTexture(key);
+      this.tweens.add({ targets: m, scaleX: m.scaleX * 1.08, scaleY: m.scaleY * 1.08, duration: 120, yoyo: true });
+      this.time.delayedCall(900, () => m.active && has(this, 'scratchy_idle') && m.setTexture('scratchy_idle'));
+      return;
+    }
     const im = art(this, key, -100, H - 300, 200, 200);
     if (!im) return;
     im.setDepth(35);
@@ -762,30 +811,33 @@ export class LevelScene extends Phaser.Scene {
     const c = this.add.container(0, 0).setDepth(100);
     const dim = this.add.rectangle(W / 2, H / 2, W, H, DIM, 0.5).setInteractive();
     const g = this.add.graphics();
-    const nl = Math.min(lines.length, 3);
+    const nl = Math.min(lines.length, isLand() ? 2 : 3);
     // title, paws, fish, up to 3 lines, Continue, Map: stacked so nothing overlaps
-    const ph = 380 + nl * 42 + 110 + 120;
+    // vertical rhythm: tighter on landscape screens (720 px tall)
+    const L = isLand() ? { paw: 148, hint: 214, fish: 262, lines: 312, step: 36, gap: 44, b2: 98 } : { paw: 170, hint: 255, fish: 315, lines: 375, step: 42, gap: 60, b2: 112 };
+    const ph = L.lines + nl * L.step + L.gap + L.b2 + 80;
     const top = H / 2 - ph / 2 - 20;
-    panel(g, 50, top, W - 100, ph, 40);
+    const pw = Math.min(W - 100, 620);
+    card(g, W / 2 - pw / 2, top, pw, ph, 40);
     const title = d.mode === 'level' ? t('levelDone', { n: d.n }) : t('dailyDone');
     const tt = txt(this, W / 2, top + 64, title, 42);
-    if (tt.width > W - 160) tt.setScale((W - 160) / tt.width);
+    if (tt.width > pw - 60) tt.setScale((pw - 60) / tt.width);
     c.add([dim, g, tt]);
     for (let i = 0; i < 3; i++) {
-      const im = icon(this, 'paw', W / 2 + (i - 1) * 110, top + 170, 96).setAlpha(i < paws ? 1 : 0.2).setScale(0);
+      const im = icon(this, 'paw', W / 2 + (i - 1) * 110, top + L.paw, 96).setAlpha(i < paws ? 1 : 0.2).setScale(0);
       c.add(im);
       const sc = 96 / Math.max(im.width, im.height);
       this.tweens.add({ targets: im, scale: sc, delay: 150 + i * 160, duration: 260, ease: 'Back.Out', onStart: () => { if (i < paws) sfx.star(); } });
     }
-    c.add(txt(this, W / 2, top + 255, t(paws === 3 ? 'pawsPerfect' : 'pawsHint'), 24, C.muted));
-    c.add(icon(this, 'fish', W / 2 - 50, top + 315, 56));
-    c.add(txt(this, W / 2 + 10, top + 317, `+${fish}`, 44).setOrigin(0, 0.5));
-    lines.slice(0, 3).forEach((l, i) => {
-      const lt = txt(this, W / 2, top + 375 + i * 42, l, 26);
-      if (lt.width > W - 160) lt.setScale((W - 160) / lt.width);
+    c.add(txt(this, W / 2, top + L.hint, t(paws === 3 ? 'pawsPerfect' : 'pawsHint'), 24, C.muted));
+    c.add(icon(this, 'fish', W / 2 - 50, top + L.fish, 56));
+    c.add(txt(this, W / 2 + 10, top + L.fish + 2, `+${fish}`, 44).setOrigin(0, 0.5));
+    lines.slice(0, nl).forEach((l, i) => {
+      const lt = txt(this, W / 2, top + L.lines + i * L.step, l, 26);
+      if (lt.width > pw - 60) lt.setScale((pw - 60) / lt.width);
       c.add(lt);
     });
-    const by = top + 380 + nl * 42 + 60;
+    const by = top + L.lines + nl * L.step + L.gap;
     let leaving = false;
     if (d.mode === 'level') {
       const next = async () => {
@@ -794,12 +846,12 @@ export class LevelScene extends Phaser.Scene {
         await betweenLevels(d.n);
         this.scene.restart({ mode: 'level', n: d.n + 1 });
       };
-      c.add(button(this, W / 2, by, 440, 104, t('continue'), () => void next(), { color: C.primary, size: 40, icon: 'play' }));
+      c.add(candy(this, W / 2, by, 440, 104, t('continue').toUpperCase(), () => void next()));
       const ad = rewardedReady() && fish > 0;
-      c.add(button(this, ad ? W / 2 - 115 : W / 2, by + 112, ad ? 210 : 260, 76, t('map'), () => this.scene.start('Map'), { color: C.panel, size: 28 }));
+      c.add(candy(this, ad ? W / 2 - 115 : W / 2, by + L.b2, ad ? 210 : 260, 72, t('map'), () => this.scene.start('Map'), '', S.purpleBtn, S.purpleLip));
       if (ad) {
         let doubled = false;
-        c.add(button(this, W / 2 + 115, by + 112, 210, 76, t('adDoubleShort'), async () => {
+        c.add(button(this, W / 2 + 115, by + L.b2, 210, 76, t('adDoubleShort'), async () => {
           if (doubled) return;
           doubled = true;
           if (await rewarded(this, 'win_double')) {
@@ -817,11 +869,11 @@ export class LevelScene extends Phaser.Scene {
           taps: this.taps, streak: save.daily.streak, board,
         });
       });
-      c.add(button(this, W / 2, by, 440, 104, t('share'), () => this.shareDaily(), { color: C.primary, size: 38 }));
-      c.add(button(this, W / 2, by + 112, 260, 76, t('map'), () => this.scene.start('Map'), { color: C.panel, size: 28 }));
+      c.add(candy(this, W / 2, by, 440, 104, t('share'), () => this.shareDaily(), ''));
+      c.add(candy(this, W / 2, by + L.b2, 260, 72, t('map'), () => this.scene.start('Map'), '', S.purpleBtn, S.purpleLip));
     }
-    c.setScale(0.9).setAlpha(0);
-    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 220, ease: 'Back.Out' });
+    c.setAlpha(0).setY(40);
+    this.tweens.add({ targets: c, y: 0, alpha: 1, duration: 240, ease: 'Back.Out' });
   }
 
   private sendShare?: () => Promise<void>;

@@ -23,7 +23,7 @@ export function drawCat(
 ) {
   g.clear();
   const b = BREEDS[breed] ?? BREEDS[0];
-  const w = size * 0.56;
+  const w = size * 0.66; // plump bodies (2026-11-23 style board)
   const n = pts.length;
 
   const stroke = (width: number, color: number) => {
@@ -69,13 +69,7 @@ export function drawCat(
   // two-tone cel shading: shade tone, base shifted to the lit side, thin rim highlight
   stroke(w, shade(b.body));
   path(off(-w * 0.07, -w * 0.07), w * 0.8, b.body);
-  // stripes / spots
-  g.fillStyle(b.accent, 1);
-  for (let i = 1; i < n; i++) {
-    const a = pts[i - 1];
-    const c = pts[i];
-    g.fillCircle((a.x + c.x) / 2 - w * 0.04, (a.y + c.y) / 2 - w * 0.04, w * 0.2);
-  }
+  drawCoat(g, pts, b.key, b.accent, w, size);
 
   if (skipHead) return;
   // head
@@ -171,6 +165,86 @@ function drawAccessory(g: Phaser.GameObjects.Graphics, acc: string, h: P, R: num
       const x = bx + sx * s * R * 0.28;
       const y = by + sy * s * R * 0.28;
       g.fillTriangle(x - sx * R * 0.14, y - sy * R * 0.14, x + sx * R * 0.14, y + sy * R * 0.14, x - fx * R * 0.4, y - fy * R * 0.4);
+    }
+  }
+}
+
+/** Coat pattern per variant: tabby stripes, calico patches, colorpoint tail, spots; plain for solid coats. */
+const COAT: Record<string, 'stripes' | 'faint' | 'patches' | 'points' | 'spots' | 'plain'> = {
+  ginger: 'stripes', gray: 'stripes', tabby: 'stripes', mainecoon: 'stripes', golden: 'stripes',
+  white: 'faint', calico: 'patches', siamese: 'points', bengal: 'spots',
+  black: 'plain', british: 'plain', sphynx: 'plain', scratchy: 'faint',
+};
+
+/** Samples the body polyline every `step` px from the head: position + unit direction. */
+function along(pts: P[], step: number, start: number) {
+  const out: { x: number; y: number; dx: number; dy: number; t: number }[] = [];
+  let total = 0;
+  const lens: number[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const l = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    lens.push(l);
+    total += l;
+  }
+  for (let d = start; d < total; d += step) {
+    let rest = d;
+    let i = 0;
+    while (i < lens.length - 1 && rest > lens[i]) rest -= lens[i++];
+    const a = pts[i];
+    const c = pts[i + 1];
+    const l = lens[i] || 1;
+    const dx = (c.x - a.x) / l;
+    const dy = (c.y - a.y) / l;
+    out.push({ x: a.x + dx * rest, y: a.y + dy * rest, dx, dy, t: d / total });
+  }
+  return out;
+}
+
+function drawCoat(g: Phaser.GameObjects.Graphics, pts: P[], key: string, accent: number, w: number, size: number) {
+  const kind = COAT[key] ?? 'plain';
+  if (pts.length < 2 || kind === 'plain') return;
+  if (kind === 'stripes' || kind === 'faint') {
+    const col = kind === 'faint' ? mix(accent, 0xffffff, 0.15) : accent;
+    const alpha = kind === 'faint' ? 0.55 : 1;
+    const half = w * 0.3;
+    for (const s of along(pts, size * 0.42, size * 0.55)) {
+      // perpendicular stripe, slightly bent toward the tail like a real tabby band
+      const nx = -s.dy;
+      const ny = s.dx;
+      const bend = w * 0.08;
+      g.lineStyle(w * 0.15, col, alpha);
+      g.beginPath();
+      g.moveTo(s.x + nx * half - s.dx * bend, s.y + ny * half - s.dy * bend);
+      g.lineTo(s.x, s.y);
+      g.lineTo(s.x - nx * half - s.dx * bend, s.y - ny * half - s.dy * bend);
+      g.strokePath();
+      g.fillStyle(col, alpha);
+      g.fillCircle(s.x + nx * half - s.dx * bend, s.y + ny * half - s.dy * bend, w * 0.075);
+      g.fillCircle(s.x - nx * half - s.dx * bend, s.y - ny * half - s.dy * bend, w * 0.075);
+    }
+  } else if (kind === 'patches') {
+    let k = 0;
+    for (const s of along(pts, size * 0.75, size * 0.6)) {
+      const side = k % 2 ? 1 : -1;
+      g.fillStyle(k % 3 === 1 ? 0x3d3540 : accent, 1);
+      g.fillEllipse(s.x - s.dy * side * w * 0.16, s.y + s.dx * side * w * 0.16, w * 0.62, w * 0.5);
+      k++;
+    }
+  } else if (kind === 'points') {
+    // colorpoint: the body darkens toward the tail
+    for (const s of along(pts, size * 0.12, size * 0.4)) {
+      if (s.t < 0.55) continue;
+      g.fillStyle(accent, Math.min(0.9, (s.t - 0.55) * 2.4));
+      g.fillCircle(s.x, s.y, w * 0.4);
+    }
+  } else if (kind === 'spots') {
+    let k = 0;
+    for (const s of along(pts, size * 0.36, size * 0.5)) {
+      const side = k++ % 2 ? 1 : -1;
+      const x = s.x - s.dy * side * w * 0.2;
+      const y = s.y + s.dx * side * w * 0.2;
+      g.fillStyle(accent, 1).fillCircle(x, y, w * 0.13);
+      g.fillStyle(mix(accent, 0xe8b35a, 0.6), 1).fillCircle(x, y, w * 0.06);
     }
   }
 }

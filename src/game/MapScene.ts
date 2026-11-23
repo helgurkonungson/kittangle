@@ -8,8 +8,8 @@ import { DAILY_FROM_LEVEL } from '../core/tutorial';
 import { t } from '../i18n';
 import { playMusic, setMusicOff, setMuted, sfx } from './sfx';
 import { grant, persist, platform, save } from './state';
-import { art } from './art';
-import { badge, button, C, DIM, iconButton, modal, panel, pill, tile, toast, txt, W, H } from './ui';
+import { badge, button, C, DIM, isLand, modal, panel, toast, txt, W, H } from './ui';
+import { blurredBackdrop, candy, chip, leaves, pawBar, ribbon, roundBtn, S, title } from './style';
 import { icon, IconName } from './icons';
 import { challenge, challengeOffered, markChallengeOffered } from './share';
 import { fmtTime } from '../core/share';
@@ -37,63 +37,55 @@ export class MapScene extends Phaser.Scene {
     platform.ready();
     const ch = this.ch;
     const first = ch * CHAPTER_LEN + 1;
-    const vig = Math.min(ch, 3) + 1;
-    this.cameras.main.setBackgroundColor(C.bg);
-    art(this, ['bg_board_floor', 'bg_board_garden', 'bg_board_roof', 'bg_board_kitchen'][vig - 1], W / 2, H / 2, W, H, true);
-    this.add.rectangle(W / 2, H / 2, W, H, C.bg, 0.45);
+    const land = isLand();
+    // backdrop: the chapter's room, softly blurred and tinted violet (style board 2026-11-23)
+    blurredBackdrop(this, ch % 2 ? 'cafe_room2' : 'cafe_room1');
+    leaves(this, -10, H + 10, 200, -1.1, 4);
+    leaves(this, W + 10, H + 10, 190, -2.0, 5);
     playMusic('music_menu');
 
-    // top bar: settings, chapter title, currencies
-    iconButton(this, 60, 60, 'settings', () => this.settings(), 80);
-    pill(this, W - 24, 60, 'fish', () => save.fish, 150);
-    pill(this, W - 24, 122, 'star', () => save.stars, 120);
-
-    // chapter header: vignette, name, progress
-    art(this, `chapter_vig_${vig}`, W / 2, 205, 260, 190);
     const done = Math.max(0, Math.min(CHAPTER_LEN, save.level - first));
-    const name = ch < 3 || first <= CAMPAIGN_LEVELS ? t('chapter_' + chapterKey(ch)) : t('endless');
-    const nt = txt(this, W / 2, 322, t('chapterN', { n: ch + 1, name }), 34).setStroke('#fff8ef', 8);
-    if (nt.width > W - 80) nt.setScale((W - 80) / nt.width);
-    const bw = 300;
-    const g = this.add.graphics();
-    g.fillStyle(C.inkN, 1).fillRoundedRect(W / 2 - bw / 2 - 3, 352, bw + 6, 30, 15);
-    g.fillStyle(C.panel, 1).fillRoundedRect(W / 2 - bw / 2, 355, bw, 24, 12);
-    if (done) g.fillStyle(0x3478f6, 1).fillRoundedRect(W / 2 - bw / 2, 355, Math.max(24, (bw * done) / CHAPTER_LEN), 24, 12);
-    txt(this, W / 2, 367, `${done}/${CHAPTER_LEN}`, 20, done > CHAPTER_LEN / 2 ? '#ffffff' : C.ink);
-    if (ch > 0) iconButton(this, 70, 300, 'back', () => this.scene.restart({ ch: ch - 1 }), 76);
-    if (save.level > first + CHAPTER_LEN - 1) {
-      const nb = iconButton(this, W - 70, 300, 'next', () => this.scene.restart({ ch: ch + 1 }), 76);
-      void nb;
-    }
+    const name = first <= CAMPAIGN_LEVELS ? t('chapter_' + chapterKey(ch)) : t('endless');
+    ribbon(this, W / 2, 62, land ? 560 : 500, name.toUpperCase(), 'paw', 30);
+    pawBar(this, W / 2 + 20, 140, 230, done, CHAPTER_LEN);
+    roundBtn(this, 56, 56, 76, S.purpleBtn, S.purpleLip, 'back', () => this.scene.start('Title'));
+    if (land) chip(this, W - 100, 56, 160, 'fish', () => String(save.fish));
+    else chip(this, W - 100, 210, 160, 'fish', () => String(save.fish));
+    if (ch > 0) roundBtn(this, W / 2 - 190, 140, 60, S.lavDeep, S.purpleLip, '◀', () => this.scene.restart({ ch: ch - 1 }));
+    if (save.level > first + CHAPTER_LEN - 1) roundBtn(this, W / 2 + 230, 140, 60, S.lavDeep, S.purpleLip, '▶', () => this.scene.restart({ ch: ch + 1 }));
 
-    this.route(first);
+    this.route(first, land);
 
     // main action + destinations
     const cur = save.level;
-    const play = button(this, W / 2, 1050, 520, 112, t('play', { n: cur }), () => this.start(cur), { color: C.primary, size: 42, icon: 'play' });
-    this.tweens.add({ targets: play, scale: 1.03, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    const play = candy(this, W / 2, land ? H - 62 : 1030, land ? 400 : 480, land ? 88 : 108, t('play', { n: cur }).toUpperCase(), () => this.start(cur));
+    this.tweens.add({ targets: play, scale: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     const today = utcDate();
-    const tw = 150;
-    const ty = 1190;
-    const cafe = tile(this, W / 2 - (tw + 14) * 1.5, ty, tw, 136, 'cafe', t('cafe'), () => this.scene.start('Cafe'));
-    const task = nextTask(save.tasksDone);
-    if (task && save.stars >= task.cost) badge(this, cafe, tw / 2 - 8, -60);
-    tile(this, W / 2 - (tw + 14) * 0.5, ty, tw, 136, 'collection', t('collection'), () => this.scene.start('Collection'));
     const dailyOpen = save.level >= DAILY_FROM_LEVEL;
-    const daily = tile(this, W / 2 + (tw + 14) * 0.5, ty, tw, 136, dailyOpen ? 'daily' : 'lock', t('dailyShort'), () => {
-      if (!dailyOpen) return toast(this, t('dailyLocked', { n: DAILY_FROM_LEVEL - 1 }));
-      this.scene.start('Level', { mode: 'daily', date: today });
-    });
-    if (dailyOpen && !save.daily.results[today]) badge(this, daily, tw / 2 - 8, -60);
-    if (!dailyOpen) daily.setAlpha(0.6);
-    // the login gift is optional: a small tile, never a popup (GDD §4)
-    const gift = tile(this, W / 2 + (tw + 14) * 1.5, ty, tw, 136, 'gift', t('gift'), () => this.calendar(today));
+    const task = nextTask(save.tasksDone);
     const giftReady = save.level > 1 && save.calendar.last !== today;
-    if (giftReady) badge(this, gift, tw / 2 - 8, -60);
-    else gift.setAlpha(save.level > 1 ? 0.75 : 0.5);
+    const items: [IconName, string, number, number, () => void, boolean][] = [
+      ['cafe', t('cafe'), S.pink, S.pinkLip, () => this.scene.start('Cafe'), !!task && save.stars >= task.cost],
+      ['collection', t('collection'), 0x22c3e6, 0x1590a8, () => this.scene.start('Collection'), false],
+      [dailyOpen ? 'daily' : 'lock', t('dailyShort'), S.yellow, S.yellowLip, () => {
+        if (!dailyOpen) return toast(this, t('dailyLocked', { n: DAILY_FROM_LEVEL - 1 }));
+        this.scene.start('Level', { mode: 'daily', date: today });
+      }, dailyOpen && !save.daily.results[today]],
+      // the login gift is optional: a small button, never a popup (GDD §4)
+      ['gift', t('gift'), S.purpleBtn, S.purpleLip, () => this.calendar(today), giftReady],
+      ['settings', t('settings'), S.lavDeep, S.purpleLip, () => this.settings(), false],
+    ];
+    items.forEach(([ic, label, col, lip, fn, dot], i) => {
+      // landscape: two side columns; portrait: a row at the bottom
+      const x = land ? (i < 3 ? 90 : W - 90) : W / 2 + (i - 2) * 132;
+      const y = land ? (i < 3 ? 250 + i * 150 : 250 + (i - 3) * 150) : 1170;
+      const b = roundBtn(this, x, y, land ? 92 : 96, col, lip, ic, fn);
+      title(this, x, y + 64, label, 20);
+      if (dot) badge(this, b, 34, -34);
+    });
 
     const st = streakState(save.daily.last, save.daily.streak, today);
-    if (st.alive && dailyOpen) txt(this, W / 2, 975, st.atRisk ? t('streakRisk', { n: st.streak }) : t('streakFlame', { n: st.streak }), 22, st.atRisk ? '#ff3d9a' : C.ink);
+    if (st.alive && dailyOpen) title(this, W / 2, land ? H - 128 : 950, st.atRisk ? t('streakRisk', { n: st.streak }) : t('streakFlame', { n: st.streak }), 22, st.atRisk ? '#ffd84a' : '#ffffff');
 
     if (save.level > CHAPTER_LEN && !save.feedback.asked) this.time.delayedCall(500, () => this.feedback(true));
     else this.offerChallenge(today);
@@ -104,46 +96,63 @@ export class MapScene extends Phaser.Scene {
     this.scene.start('Level', { mode: 'level', n });
   }
 
-  /** 20 nodes, 4 per row, snaking up from the bottom; node state never shown by color alone. */
-  private route(first: number) {
-    const top = 430;
-    const bottom = 930;
-    const xs = [150, 290, 430, 570];
+  /** 20 nodes on a winding cream road: 4 rows of 5 (landscape) or 5 rows of 4 (portrait), snaking up. */
+  private route(first: number, land: boolean) {
+    const cols = land ? 5 : 4;
+    const rows = CHAPTER_LEN / cols;
+    const x0 = land ? 290 : 110;
+    const x1 = land ? W - 290 : W - 110;
+    const yTop = land ? 215 : 330;
+    const yBot = land ? H - 150 : 880;
     const pos = (i: number) => {
-      const row = Math.floor(i / 4);
-      const col = row % 2 ? 3 - (i % 4) : i % 4;
-      return { x: xs[col], y: bottom - row * ((bottom - top) / 4) };
+      const row = Math.floor(i / cols);
+      const col = row % 2 ? cols - 1 - (i % cols) : i % cols;
+      return { x: x0 + (col * (x1 - x0)) / (cols - 1), y: yBot - (row * (yBot - yTop)) / (rows - 1) };
     };
-    const g = this.add.graphics();
     const pts = Array.from({ length: CHAPTER_LEN }, (_, i) => pos(i));
-    for (const [wdt, col] of [[30, C.inkN], [22, 0x3478f6], [6, 0xfff8ef]] as const) {
-      g.lineStyle(wdt, col, 1);
-      g.beginPath();
-      g.moveTo(pts[0].x, pts[0].y);
-      for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
-      g.strokePath();
+    // smooth road through the nodes, bulging out at the row ends
+    const ctrl: Phaser.Math.Vector2[] = [];
+    pts.forEach((p, i) => {
+      ctrl.push(new Phaser.Math.Vector2(p.x, p.y));
+      if (i % cols === cols - 1 && i < pts.length - 1) {
+        const q = pts[i + 1];
+        const out = (Math.floor(i / cols) % 2 ? -1 : 1) * (land ? 70 : 55);
+        ctrl.push(new Phaser.Math.Vector2(p.x + out, (p.y + q.y) / 2));
+      }
+    });
+    const road = new Phaser.Curves.Spline(ctrl).getPoints(260);
+    const g = this.add.graphics();
+    for (const [wd, col] of [[56, C.inkN], [46, 0xf2d9b8], [32, 0xfff3df]] as const) {
+      g.lineStyle(wd, col, 1);
+      g.strokePoints(road, false);
     }
     pts.forEach((p, i) => {
       const n = first + i;
       const state = n < save.level ? 'done' : n === save.level ? 'current' : 'locked';
       const c = this.add.container(p.x, p.y);
       const ng = this.add.graphics();
-      const r = state === 'current' ? 44 : 36;
-      const face = state === 'done' ? 0xff3d9a : state === 'current' ? 0xffd600 : 0xd9cfe0;
-      ng.fillStyle(C.inkN, 1).fillCircle(0, 4, r + 5);
-      ng.fillStyle(face, 1).fillCircle(0, 0, r);
-      ng.fillStyle(0xffffff, 0.35).fillCircle(-r * 0.3, -r * 0.35, r * 0.3);
-      if (isHard(n)) ng.lineStyle(5, 0x7957f5, 1).strokeCircle(0, 0, r - 4);
-      c.add(ng);
-      if (state === 'locked') c.add(icon(this, 'lock', 0, 0, 40).setAlpha(0.8));
-      else c.add(txt(this, 0, 0, String(n), n > 99 ? 24 : 30, state === 'done' ? '#ffffff' : C.ink).setStroke(state === 'done' ? C.ink : '#fff8ef', 5));
-      if (state === 'done') {
-        const paws = save.best[n] ?? 1;
-        for (let k = 0; k < 3; k++) c.add(icon(this, 'paw', (k - 1) * 22, r + 12, 22).setAlpha(k < paws ? 1 : 0.25));
+      const r = state === 'current' ? 46 : 38;
+      const face = state === 'done' ? S.yellow : state === 'current' ? S.pink : S.lav;
+      const lip = state === 'done' ? S.yellowLip : state === 'current' ? S.pinkLip : S.lavDeep;
+      if (state === 'current') {
+        const glow = this.add.circle(0, 0, r + 18, 0xffe066, 0.45);
+        c.add(glow);
+        this.tweens.add({ targets: glow, scale: 1.25, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 });
       }
-      if (isMilestone(n)) c.add(icon(this, 'chest', r * 0.85, -r * 0.8, 40));
+      ng.fillStyle(C.inkN, 1).fillCircle(0, 4, r + 4);
+      ng.fillStyle(lip, 1).fillCircle(0, 5, r);
+      ng.fillStyle(face, 1).fillCircle(0, 0, r);
+      ng.fillStyle(0xffffff, 0.35).fillEllipse(-r * 0.2, -r * 0.5, r * 1.1, r * 0.45);
+      if (isHard(n)) ng.lineStyle(5, S.purpleBtn, 1).strokeCircle(0, 0, r - 5);
+      c.add(ng);
+      const label = state === 'current' ? String(n).padStart(2, '0') : String(n);
+      const ty = state === 'current' ? 0 : -9;
+      c.add(title(this, 0, ty, label, n > 99 ? 24 : state === 'current' ? 34 : 28).setStroke(state === 'locked' ? '#7a5aa6' : '#39243f', 6));
+      if (state === 'done') c.add(icon(this, 'paw', 0, r * 0.48, r * 0.6).setAlpha((save.best[n] ?? 1) === 3 ? 1 : 0.7));
+      if (state === 'locked') c.add(icon(this, 'lock', 0, r * 0.5, r * 0.55));
+      if (isMilestone(n)) c.add(icon(this, 'chest', r * 0.8, -r * 0.85, 52));
       const lesson = LESSON_AT.get(n);
-      if (lesson) c.add(icon(this, lesson, -r * 0.85, -r * 0.8, 36));
+      if (lesson) c.add(icon(this, lesson, -r * 0.85, -r * 0.85, 42));
       if (state === 'current') {
         this.tweens.add({ targets: c, scale: 1.08, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
         // the board of the next level is generated while the player looks at the map
