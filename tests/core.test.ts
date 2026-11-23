@@ -264,14 +264,15 @@ describe('fish sink and board ramp (2026-11-16)', () => {
 });
 
 describe('GDD 2.0 campaign (2026-11-23)', () => {
-  it('board sizes and cat counts follow the guardrails (3–8 early, ≤ 18 late, ≤ 12×14)', async () => {
+  it('big boards (2026-11-23): small onboarding, then many cats, at most 14×18', async () => {
     const { getLevel } = await import('../src/core/levels');
     for (let n = 1; n <= 60; n++) {
       const lv = getLevel(n);
-      expect(lv.w, `level ${n}`).toBeLessThanOrEqual(12);
-      expect(lv.h, `level ${n}`).toBeLessThanOrEqual(14);
-      if (n <= 10) expect(lv.cats.length, `level ${n}`).toBeLessThanOrEqual(10);
-      expect(lv.cats.length, `level ${n}`).toBeLessThanOrEqual(18);
+      expect(lv.w, `level ${n}`).toBeLessThanOrEqual(14);
+      expect(lv.h, `level ${n}`).toBeLessThanOrEqual(18);
+      if (n <= 5) expect(lv.cats.length, `level ${n}`).toBeLessThanOrEqual(6);
+      if (n >= 40) expect(lv.cats.length, `level ${n}`).toBeGreaterThanOrEqual(20);
+      expect(lv.cats.length, `level ${n}`).toBeLessThanOrEqual(80);
     }
   }, 60000);
   it('sleepy cats: a tap wakes them, they never make a level unsolvable', async () => {

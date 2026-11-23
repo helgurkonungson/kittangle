@@ -13,7 +13,7 @@ import { addFish, grantPaws, persist, platform, save, unlockBreed } from './stat
 import { button, C, dialog, modal, portraitColumn, toast, txt, W, panel } from './ui';
 import { chip, ribbon, roundBtn, S, title } from './style';
 
-import { CAFE_UI, type Rect, placeOf } from './cafeLayout';
+import { CAFE_UI, type Rect, placeOf, SEATS } from './cafeLayout';
 
 const WALL = [0xf6dfc6, 0xe9e0ef]; // hall: peach, attic: dusty lavender (art bible color script)
 const FLOOR = [0xe3c49f, 0xd8b98e]; // hall: honey wood, attic: pine
@@ -38,7 +38,11 @@ export class CafeScene extends Phaser.Scene {
     return r === 0 || (first >= 0 && progress(save.tasksDone).chapter >= first);
   }
 
+  /** decor images drawn this time, by slot (cats sit on them) */
+  private placed = new Map<string, { im: Phaser.GameObjects.Image; v: number }>();
+
   create() {
+    this.placed = new Map();
     portraitColumn(this);
     this.time.delayedCall(350, () => tipOnce(this, 'cafe'));
     playMusic('music_cafe');
@@ -83,6 +87,7 @@ export class CafeScene extends Phaser.Scene {
       const rect = placeOf(r, key, v);
       if (v >= 0) {
         const im = art(this, `decor_r${r + 1}_${key}_${v}`, rect.x, rect.y, rect.w, rect.h);
+        if (im) this.placed.set(key, { im, v });
         if (im && i === this.upgraded) this.celebrate(im);
         if (im && rect.anchor === 'floor') {
           im.setOrigin(0.5, 1).setY(rect.y + rect.h / 2);
@@ -334,23 +339,27 @@ export class CafeScene extends Phaser.Scene {
   }
 
   private spawnCats() {
-    // fixed spots that never overlap each other, the tips button, the counter or the guest:
-    // the floor left of the counter, and the sofa seat when there is a sofa
+    // cats use the furniture first (seats per piece and variant, see SEATS), the rest sit on the floor
+    // left of the counter; spots never overlap each other, the tips button or the guest
     const r = this.room;
-    const guest = save.visit.visitor >= 0;
-    const spots: { x: number; y: number; s: number }[] = [{ x: 80, y: 960, s: 118 }];
-    if (!guest) spots.push({ x: 196, y: 972, s: 118 }, { x: 312, y: 960, s: 118 });
-    const sofa = save.cafe[r][CAFE_SLOTS.indexOf('sofa')];
-    if (sofa >= 0) {
-      const p = placeOf(r, 'sofa', sofa);
-      spots.push({ x: p.x - p.w * 0.14, y: p.y - p.h * 0.02, s: 108 }, { x: p.x + p.w * 0.2, y: p.y - p.h * 0.02, s: 108 });
+    const seats: { x: number; y: number; s: number; floor: boolean }[] = [];
+    for (const key of CAFE_SLOTS) {
+      const p = this.placed.get(key);
+      if (!p) continue;
+      const { im, v } = p;
+      const left = im.x - im.displayWidth * im.originX;
+      const top = im.y - im.displayHeight * im.originY;
+      for (const st of SEATS[r][key][v] ?? []) seats.push({ x: left + st.fx * im.displayWidth, y: top + st.fy * im.displayHeight, s: st.s, floor: false });
     }
-    save.breeds.slice(0, spots.length)
-      .map((b, i) => ({ b, i, ...spots[i] }))
+    const floor = save.visit.visitor >= 0 ? [{ x: 80, y: 1020 }] : [{ x: 80, y: 1020 }, { x: 196, y: 1032 }, { x: 312, y: 1020 }];
+    for (const f of floor) seats.push({ ...f, s: 118, floor: true });
+    save.breeds.slice(0, seats.length)
+      .map((b, i) => ({ b, i, ...seats[i] }))
       .sort((a, z) => a.y - z.y)
-      .forEach(({ b, i, x, y, s: size }) => {
-        this.add.ellipse(x, y + size * 0.42, size * 0.7, size * 0.16, C.inkN, 0.12);
+      .forEach(({ b, i, x, y, s: size, floor: onFloor }) => {
+        if (onFloor) this.add.ellipse(x, y - 4, size * 0.62, size * 0.14, C.inkN, 0.12);
         const cat = sittingCat(this, b, x, y, size);
+        if (cat instanceof Phaser.GameObjects.Image) cat.setOrigin(0.5, 1).setPosition(x, y);
         if (i % 2) cat.setScale(-cat.scaleX, cat.scaleY);
         this.tweens.add({ targets: cat, scaleY: cat.scaleY * 1.03, duration: 1400 + i * 170, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
       });

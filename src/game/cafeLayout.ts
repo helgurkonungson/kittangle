@@ -31,8 +31,10 @@ export const PLACES: Record<Slot, Place[]>[] = [
     counter: [onFloor(520, 1090, 330, 190)],
   },
   { // attic
-    window: [P(220, 430, 240, 240, 'wall')],
-    lamp: [hanging(450, 290, 160, 200), hanging(450, 285, 200, 120), hanging(450, 290, 160, 200)],
+    // window centered under the ridge (apex ≈ 240,128); lamps hang from the right roof slope,
+    // whose underside runs y ≈ 231 + 0.71·(x − 400): at x = 470 that is ≈ 281
+    window: [P(240, 268, 220, 220, 'wall')],
+    lamp: [hanging(470, 270, 160, 200), hanging(470, 266, 200, 120), hanging(470, 270, 160, 200)],
     post: [P(630, 520, 150, 200, 'wall')],
     sofa: [onFloor(230, 900, 320, 230)],
     counter: [onFloor(520, 1090, 330, 190)],
@@ -52,7 +54,8 @@ export const CAFE_UI = {
   back: btn(64, 64, 96, 96),
   stars: btn(720 - 24 - 65, 64, 130, 56),
   // labelled pills ("◀ Hall" / "Attic ▶") so they never read as the Back button
-  prevRoom: btn(96, 215, 168, 64),
+  // low on the wall: the attic window sits under the ridge at the top left
+  prevRoom: btn(96, 580, 168, 64),
   nextRoom: btn(720 - 96, 215, 168, 64),
   tips: btn(130, 1065, 210, 70),
   taskPanel: btn(360, 1190, 680, 136),
@@ -61,3 +64,27 @@ export const CAFE_UI = {
 
 export const overlaps = (a: Rect, b: Rect) =>
   Math.abs(a.x - b.x) * 2 < a.w + b.w && Math.abs(a.y - b.y) * 2 < a.h + b.h;
+
+/**
+ * Where cats sit on a placed decor piece, as fractions of its drawn image (fx across, fy = where the
+ * cat's bottom rests, from the top) and the cat's height in px. Pieces with nothing to sit on have none.
+ * Index: [room][slot][variant]. Checked against the art of 2026-11-19 (decor_r1_*, decor_r2_*).
+ */
+export type Seat = { fx: number; fy: number; s: number };
+export const SEATS: Record<Slot, Seat[][]>[] = [
+  { // hall
+    window: [[{ fx: 0.5, fy: 0.9, s: 96 }], [{ fx: 0.5, fy: 0.93, s: 96 }], [{ fx: 0.5, fy: 0.9, s: 92 }]],
+    lamp: [[], [], []],
+    post: [[{ fx: 0.4, fy: 0.1, s: 96 }], [{ fx: 0.74, fy: 0.37, s: 84 }], []],
+    sofa: [[{ fx: 0.33, fy: 0.64, s: 106 }, { fx: 0.62, fy: 0.64, s: 106 }], [{ fx: 0.3, fy: 0.64, s: 106 }, { fx: 0.6, fy: 0.64, s: 106 }],
+      [{ fx: 0.38, fy: 0.42, s: 104 }]],
+    counter: [[], [], []],
+  },
+  { // attic
+    window: [[{ fx: 0.5, fy: 0.92, s: 90 }], [{ fx: 0.55, fy: 0.88, s: 86 }], [{ fx: 0.42, fy: 0.8, s: 92 }]],
+    lamp: [[], [], []],
+    post: [[{ fx: 0.45, fy: 0.38, s: 80 }], [{ fx: 0.68, fy: 0.72, s: 84 }], [{ fx: 0.5, fy: 0.6, s: 84 }]],
+    sofa: [[{ fx: 0.42, fy: 0.64, s: 110 }], [{ fx: 0.64, fy: 0.62, s: 104 }], [{ fx: 0.28, fy: 0.62, s: 100 }, { fx: 0.72, fy: 0.62, s: 100 }]],
+    counter: [[{ fx: 0.3, fy: 0.74, s: 96 }, { fx: 0.58, fy: 0.74, s: 96 }], [], []],
+  },
+];

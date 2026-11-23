@@ -27,7 +27,8 @@ export class TitleScene extends Phaser.Scene {
     playMusic('music_menu');
     const land = isLand();
     const room = has(this, land ? 'room_land' : 'room_port') ? (land ? 'room_land' : 'room_port') : '';
-    if (room) art(this, room, W / 2, H / 2, W, H, true);
+    // the room is toned down a little so the menu reads as the foreground
+    if (room) art(this, room, W / 2, H / 2, W, H, true)?.setTint(0xd8cce4);
     else stage(this, { bokeh: 22 });
 
     const bg = this.add.zone(0, 0, W, H).setOrigin(0).setInteractive();
@@ -72,12 +73,13 @@ export class TitleScene extends Phaser.Scene {
 
     // ginger on her back: the raised paw bats the yarn ball
     const [gx, gy, gw] = P.rug;
-    const paw = this.piece('menu_ginger_paw', 0, 0, gw * 0.32, 0.5, 0.92);
+    const paw = this.piece('menu_ginger_paw', 0, 0, gw * 0.3, 0.5, 0.93);
     const ginger = this.piece('menu_ginger_play', gx, gy, gw, 0.5, 0.5, true);
     if (ginger && paw) {
-      const sx = gx + (0.56 - 0.5) * ginger.displayWidth;
-      const sy = gy + (0.6 - 0.5) * ginger.displayHeight;
-      paw.setPosition(sx, sy).setAngle(-25).setDepth(ginger.depth - 1);
+      // the paw grows out of the stump on the chest (sprite point 0.453, 0.5) and is drawn in front of it
+      const sx = gx + (0.453 - 0.5) * ginger.displayWidth;
+      const sy = gy + (0.53 - 0.5) * ginger.displayHeight;
+      paw.setPosition(sx, sy).setAngle(-25).setDepth(ginger.depth + 1);
       const yarn = this.piece('menu_yarn', sx - gw * 0.2, sy - gw * 0.42, gw * 0.3, 0.5, 0.5);
       const fish = this.piece('menu_fish', gx + gw * 0.55, gy + gw * 0.12, gw * 0.3, 0.5, 0.5);
       fish?.setAngle(-14);
@@ -137,6 +139,13 @@ export class TitleScene extends Phaser.Scene {
 
   // ---------- menu ----------
 
+  /** Dark violet rounded plate behind menu items (contrast over the picture). */
+  private plate(x: number, y: number, w: number, h: number, r: number, a: number) {
+    this.add.graphics().setDepth(8)
+      .fillStyle(0x2a1250, a).fillRoundedRect(x - w / 2, y - h / 2, w, h, r)
+      .lineStyle(4, 0xffffff, 0.55).strokeRoundedRect(x - w / 2, y - h / 2, w, h, r);
+  }
+
   private menu(land: boolean) {
     // landscape: a column on the right (over the counter), portrait: logo on top, buttons on the floor
     const cx = land ? 1030 : W / 2;
@@ -144,8 +153,9 @@ export class TitleScene extends Phaser.Scene {
     const logo = art(this, 'logo', cx, logoY, land ? 470 : 500, land ? 290 : 330)?.setDepth(10);
     if (logo) this.tweens.add({ targets: logo, scale: logo.scale * 1.03, angle: { from: -1, to: 1 }, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     else title(this, cx, logoY, 'Kittangle', 100, '#ffd84a').setDepth(10);
-    const tag = title(this, cx, logoY + (land ? 168 : 188), t('tagline'), land ? 26 : 28).setDepth(10);
-    tag.setStroke('#5b2a86', 10).setShadow(0, 3, '#39243f', 0, true, true);
+    const tag = title(this, cx, logoY + (land ? 168 : 188), t('tagline'), land ? 26 : 28).setDepth(11);
+    tag.setStroke('#39243f', 8);
+    this.plate(cx, tag.y, tag.width + 44, 50, 25, 0.82);
 
     const playY = land ? 450 : 1058;
     const play = candy(this, cx, playY, land ? 400 : 440, land ? 104 : 112, t('play', { n: save.level }), () => {
@@ -166,9 +176,15 @@ export class TitleScene extends Phaser.Scene {
     ];
     const rowY = playY + (land ? 125 : 112);
     const step = land ? 108 : 124;
+    // a violet plate under the buttons separates them from the busy room
+    const top = playY - (land ? 76 : 82);
+    const bottom = rowY + (land ? 88 : 92);
+    this.plate(cx, (top + bottom) / 2, land ? 470 : 560, bottom - top, 40, 0.78);
     items.forEach(([ic, col, lip, fn], i) => {
       const x = cx + (i - 1.5) * step;
-      roundBtn(this, x, rowY, land ? 88 : 96, col, lip, ic, fn).setDepth(10);
+      const d = land ? 88 : 96;
+      this.add.circle(x, rowY + 2, d / 2 + 7, 0xffffff, 0.95).setDepth(9);
+      roundBtn(this, x, rowY, d, col, lip, ic, fn).setDepth(10);
       const l = title(this, x, rowY + (land ? 62 : 64), t(ic === 'daily' ? 'dailyShort' : ic), 21).setDepth(10);
       l.setStroke('#39243f', 7);
     });

@@ -50,6 +50,12 @@ const FAMILY = [0xff3d9a, 0x22d3e6, 0xb8f52f, 0x7957f5];
 /** Scratchy's reaction lasts ~0.8 s; taps during the cooldown only pulse the blocker */
 const SCRATCHY_COOLDOWN = 1100;
 
+/** Board mirrored along its diagonal (x ↔ y): directions swap with it, solvability is unchanged. */
+function transpose(lv: Level): Level {
+  const sw = (p: Cell) => ({ x: p.y, y: p.x });
+  return { ...lv, w: lv.h, h: lv.w, cats: lv.cats.map((c) => ({ ...c, cells: c.cells.map(sw) })), boxes: lv.boxes.map(sw) };
+}
+
 /** everything that moves together when a cat bounces or shakes */
 const parts = (v: CatView) => [v.g, v.rope, v.head, v.acc].filter(Boolean) as Phaser.GameObjects.GameObject[];
 
@@ -118,14 +124,17 @@ export class LevelScene extends Phaser.Scene {
   create() {
     fitCamera(this);
     const d = this.d;
-    this.level = d.mode === 'level' ? getLevel(d.n) : getDaily(d.date);
+    const land = isLand();
+    const lv = d.mode === 'level' ? getLevel(d.n) : getDaily(d.date);
+    // tall boards lie on their side on a wide screen (a mirror image: same puzzle, same solution)
+    this.level = land && lv.h > lv.w ? transpose(lv) : lv;
     this.board = new Board(this.level);
     const { w, h } = this.level;
     this.cameras.main.setBackgroundColor(C.bg);
 
     // board area: center column between the info panel and Scratchy in landscape, under the HUD in portrait
-    const land = isLand();
-    const A = land ? { x: 360, y: 46, w: W - 360 - 250, h: H - 92 } : { x: 28, y: 240, w: W - 56, h: H - 240 - 230 };
+    const scratchy = this.level.cats.some((c) => c.breed === SCRATCHY);
+    const A = land ? { x: 360, y: 40, w: W - 360 - (scratchy ? 250 : 30), h: H - 80 } : { x: 20, y: 236, w: W - 40, h: H - 236 - 226 };
     this.cs = Math.floor(Math.min(A.w / w, A.h / h, 110));
     this.ox = Math.round(A.x + (A.w - this.cs * w) / 2);
     this.oy = Math.round(A.y + (A.h - this.cs * h) / 2);

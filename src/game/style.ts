@@ -129,7 +129,7 @@ export function roundBtn(
   g.fillStyle(0xffffff, 0.3).fillEllipse(-r * 0.25, -r * 0.45, r * 1.1, r * 0.5);
   c.add(g);
   const isIcon = ['settings', 'map', 'hint', 'cafe', 'collection', 'daily', 'gift', 'play', 'music', 'sound', 'back', 'next', 'star', 'fish', 'paw', 'chest', 'lock', 'feedback'].includes(ic);
-  c.add(isIcon ? icon(sc, ic as IconName, 0, 0, d * 0.62) : title(sc, 0, 0, ic, d * 0.42));
+  c.add(isIcon ? icon(sc, ic as IconName, 0, 0, d * 0.62) : ic === '↻' ? restartIcon(sc, d * 0.62) : title(sc, 0, 0, ic, d * 0.42));
   c.setSize(d, d).setInteractive({ useHandCursor: true });
   c.on('pointerdown', () => {
     sfx.click();
@@ -139,6 +139,30 @@ export function roundBtn(
   c.on('pointerover', () => c.setScale(1.06));
   c.on('pointerout', () => c.setScale(1));
   return c;
+}
+
+/** Thick white "restart" arrow, as big as the generated icons on the neighbouring buttons. */
+function restartIcon(sc: Phaser.Scene, size: number) {
+  const g = sc.add.graphics();
+  const R = size * 0.32;
+  const a0 = Phaser.Math.DegToRad(-35);
+  const a1 = Phaser.Math.DegToRad(245);
+  const tip = (r: number, w: number) => {
+    const px = Math.cos(a1) * R;
+    const py = Math.sin(a1) * R;
+    const tx = -Math.sin(a1);
+    const ty = Math.cos(a1);
+    const nx = Math.cos(a1);
+    const ny = Math.sin(a1);
+    return [px + tx * r, py + ty * r, px + nx * w - tx * r * 0.15, py + ny * w - ty * r * 0.15, px - nx * w - tx * r * 0.15, py - ny * w - ty * r * 0.15];
+  };
+  for (const [w, col, k] of [[size * 0.24, C.inkN, 1.35], [size * 0.14, 0xffffff, 1]] as const) {
+    g.lineStyle(w, col, 1).beginPath().arc(0, 0, R, a0, a1, false).strokePath();
+    g.fillStyle(col, 1).fillCircle(Math.cos(a0) * R, Math.sin(a0) * R, w / 2);
+    const t = tip(size * 0.2 * k, size * 0.19 * k);
+    g.fillTriangle(t[0], t[1], t[2], t[3], t[4], t[5]);
+  }
+  return g;
 }
 
 /** Cream card with a lavender lip and plum outline. */

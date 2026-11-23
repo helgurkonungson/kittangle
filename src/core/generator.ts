@@ -26,6 +26,8 @@ export interface GenParams {
   maxFree?: number;
   /** GDD 2.0: leave holes instead of filling the board with many tiny cats */
   sparse?: boolean;
+  /** big boards (2026-11-23): keep the random body lengths (no preference for long bodies) */
+  varied?: boolean;
 }
 
 /**
@@ -166,7 +168,7 @@ export function generateOnce(seed: number, p: GenParams, id: string): Level {
       const dead = K < 99 && c.lane.length < 2 ? 2 : 0;
       // with a limit a longer lane is easier to block later
       const laneBonus = K < 99 ? Math.min(c.lane.length, 8) * 4 : 0;
-      const score = -(over + dead) * 1000 + bf * 10 + laneBonus + c.cells.length + r();
+      const score = -(over + dead) * 1000 + bf * 10 + laneBonus + (p.varied ? 0 : c.cells.length) + r();
       if (score > bestScore) {
         bestScore = score;
         made = c;

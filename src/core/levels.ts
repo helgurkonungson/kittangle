@@ -72,15 +72,30 @@ export const LESSON = { blocked: 3, hint: 7, scratchy: 14, sleepy: 21, kitten: 2
 export const BREED_AT = [1, 1, 6, 12, 22, 28, 34, 40];
 export const breedsAt = (n: number) => BREED_AT.map((at, b) => (at <= n ? b : -1)).filter((b) => b >= 0);
 
-/** Cat count target for a level: 3–8 early, 6–12 mid, 8–16 late (GDD §9 guardrails). */
-export function catRange(n: number): [number, number] {
-  const ch = chapterOf(n);
+/**
+ * Board size per level (user decision 2026-11-23, after the "Arrows" reference): big boards packed with
+ * cats, one level takes a while. 5×6 onboarding, then 6×8 → 10×13 (ch 1), → 12×15 (ch 2), → 13×17 (ch 3),
+ * → 14×18 (ch 4+). Portrait cell stays ≥ 45 px.
+ */
+export function boardSize(n: number): [number, number] {
+  if (n <= 5) return [5, 6];
   const t = (stepOf(n) - 1) / (CHAPTER_LEN - 1);
-  let c = n <= 5 ? 4 : ch === 0 ? lerp(5, 9, t) : ch === 1 ? lerp(8, 12, t) : lerp(10, 15, t);
-  if (isHard(n)) c += 2;
-  if (isRest(n)) c -= 2;
-  const lo = Math.max(3, Math.round(c - 1));
-  return [lo, Math.round(c + 1)];
+  const ch = Math.min(chapterOf(n), 3);
+  const w = [lerp(6, 10, t), lerp(10, 12, t), lerp(12, 13, t), lerp(13, 14, t)][ch];
+  const h = [lerp(8, 13, t), lerp(13, 15, t), lerp(15, 17, t), lerp(17, 18, t)][ch];
+  return [Math.round(w), Math.round(h)];
+}
+/** average body length: short cats early, a bit longer later; many of them either way */
+const avgLenOf = (n: number) => (n <= 5 ? 3 : [3, 3.2, 3.3, 3.4][Math.min(chapterOf(n), 3)] + ((stepOf(n) - 1) / (CHAPTER_LEN - 1)) * 0.3);
+
+/** Cat count target: ~78% of the board covered by cats (≈ 4 early, 15→28 ch 1, up to ~55 late). */
+export function catRange(n: number): [number, number] {
+  if (n <= 5) return [3, 6];
+  const [w, h] = boardSize(n);
+  let c = (0.78 * w * h) / avgLenOf(n);
+  if (isHard(n)) c *= 1.1;
+  if (isRest(n)) c *= 0.75;
+  return [Math.round(c * 0.65), Math.round(c * 1.3)];
 }
 
 /** Special rules used on a level. */
@@ -117,23 +132,24 @@ export function levelParams(n: number): GenParams {
   const t = (stepOf(n) - 1) / (CHAPTER_LEN - 1);
   const hard = isHard(n);
   const [lo, hi] = catRange(n);
-  const w = Math.round(n <= 5 ? 5 : ch === 0 ? lerp(6, 8, t) : ch === 1 ? lerp(7, 9, t) : lerp(8, 11, t));
-  const h = Math.round(n <= 5 ? 6 : ch === 0 ? lerp(7, 9, t) : ch === 1 ? lerp(9, 11, t) : lerp(10, 13, t));
-  const avgLen = Math.min(6, 3 + ch + t * 1.5);
+  const [w, h] = boardSize(n);
+  const avgLen = avgLenOf(n);
   const sp = specialsFor(n);
+  const mid = (lo + hi) / 2;
   return {
     w, h,
-    fill: clamp((((lo + hi) / 2) * avgLen) / (w * h), 0.3, 0.75),
+    fill: clamp((mid * avgLen) / (w * h), 0.3, 0.88),
     minLen: 2,
-    maxLen: clamp(Math.round(avgLen + 2), 3, 8),
-    turn: clamp(0.3 + ch * 0.1 + t * 0.1, 0.3, 0.6),
+    maxLen: n <= 5 ? 4 : clamp(Math.round(avgLen * 2 - 2), 4, 6), // uniform 2..maxLen averages ≈ avgLen
+    varied: n > 5,
+    turn: clamp(0.35 + ch * 0.1 + t * 0.1, 0.35, 0.65),
     tangle: hard ? 1 : clamp(0.6 + t * 0.3, 0.6, 0.9),
     boxes: sp.boxes,
     sleepy: 0,
     breeds: breedsAt(n),
     depth: hi,
-    // a few free cats at once: the player has to find the move, not just tap anything
-    maxFree: hard ? 1 : n <= 5 ? 2 : stepOf(n) % 3 === 0 ? 1 : 2,
+    // on a big board several cats are free at once; the work is in finding them among many
+    maxFree: n <= 5 ? 2 : Math.max(2, Math.round(mid / (hard ? 14 : 8))),
     sparse: true,
   };
 }
@@ -143,7 +159,8 @@ function depthScore(lv: Level, p: GenParams, range: [number, number]) {
   const m = metrics(lv);
   if (!m.solvable || m.cats < range[0] || m.cats > range[1]) return -Infinity;
   const over = Math.max(0, m.peak - (p.maxFree ?? 9));
-  return m.depth * 4 / m.cats * 10 - over * 8 - m.first * 3 - m.peak;
+  // big boards (2026-11-23): more cats on the board is part of the fun
+  return m.depth * 4 / m.cats * 10 - over * 8 - m.first * 3 - m.peak + m.cats * 0.6 + m.fill * 20;
 }
 
 /** Puts the special rules on a curated board; every step keeps it solvable. */

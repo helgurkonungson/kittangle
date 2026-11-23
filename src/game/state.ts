@@ -27,9 +27,10 @@ export async function initState() {
   // dev helpers: ?level=37 jumps, ?fish=999 adds fish, ?lang=en
   if (q.get('level')) save.level = Math.max(1, Number(q.get('level')) || 1);
   if (q.get('fish')) save.fish = Number(q.get('fish')) || save.fish;
-  // dev: ?cafe=full furnishes both rooms, adds 10 breeds and a guest (UI checks)
-  if (q.get('cafe') === 'full') {
-    save.cafe = save.cafe.map((room) => room.map(() => 0));
+  // dev: ?cafe=full (or full1, full2 = variant) furnishes both rooms, adds 10 breeds and a guest (UI checks)
+  const cv = /^full(\d)?$/.exec(q.get('cafe') ?? '');
+  if (cv) {
+    save.cafe = save.cafe.map((room) => room.map(() => Number(cv[1] ?? 0)));
     save.breeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     save.visit.visitor = 9;
     save.visit.until = Date.now() + 3600e3;
