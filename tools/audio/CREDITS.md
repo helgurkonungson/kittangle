@@ -6,8 +6,8 @@ Audio set v2 (Mac folder `audio2/`, imported 2026-11-23, GDD 2.0 "bright arcade-
   prompts in `audio2/Kittangle_Audio_Prompts_Complete_v1.2.md`. Stability AI Community License: commercial use is
   free below USD 1M annual revenue, registration at stability.ai/community-license required.
   Per-file model, seed and date: `Sound/PROVENANCE.csv` on the Mac.
-- Music (4 loops: menu/map, puzzle, café, daily): prompts M01–M04 in the same file. Generator and license: TO CONFIRM
-  before release (record them in PROVENANCE.csv).
+- Music (4 loops: menu/map, puzzle, café, daily): Stable Audio open model (same Stability AI Community License),
+  prompts M01–M04 in the same file (user confirmed 2026-11-23).
 - Cat meow fallback: synthesized in code (`src/game/sfx.ts`), used only if the files fail to load.
 
 Game file names (`public/audio/`): ui_button_tap → ui_click, cat_stretch_slide → slide, cat_exit_meow_0N → meow_N,

@@ -5,4 +5,5 @@ Full product context and rules live in the claude.ai project "Kittangle" (projec
 - `src/core` stays pure TS and fully tested (`npm test`); every generated level must be solvable.
 - Game code talks to portals/stores only through `src/platform/IPlatform.ts`.
 - Small targeted edits; run `npm test` and `npm run build` once per change set.
-- Art: only Apache-2.0 Qwen-Image versions, never Qwen-Image-2.1.
+- Art: current set v3 (2026-11-19) made with ChatGPT image generation (OpenAI terms: output owned by the user, commercial use allowed). Older v1–v2 art: Apache-2.0 Qwen-Image only, never Qwen-Image-2.1. Log every batch in tools/art/ASSET_LOG.csv.
+- Audio: Stable Audio 3 open weights (Stability AI Community License: free commercial use under USD 1M annual revenue). See tools/audio/CREDITS.md.
