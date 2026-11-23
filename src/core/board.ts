@@ -72,6 +72,27 @@ export class Board {
     return { free: true, steps, blocker: EMPTY };
   }
 
+  /** Moves a cat to new cells (Scratchy crawling); the cells must be empty or its own. */
+  setCells(id: number, cells: Cat['cells']) {
+    const c = this.cats.get(id);
+    if (!c) return;
+    for (const p of c.cells) this.grid[p.y * this.w + p.x] = EMPTY;
+    const n = { ...c, cells };
+    this.cats.set(id, n);
+    for (const p of cells) this.grid[p.y * this.w + p.x] = id;
+  }
+
+  /** Can the board still be cleared from here? Greedy removal (exact: removing never blocks), sleepers ignored. */
+  solvable(): boolean {
+    const b = Object.create(Board.prototype) as Board;
+    Object.assign(b, { w: this.w, h: this.h, grid: Int32Array.from(this.grid), cats: new Map(this.cats), asleep: new Set<number>() });
+    for (;;) {
+      const free = b.freeCats();
+      if (!free.length) return b.cats.size === 0;
+      for (const id of free) b.remove(id);
+    }
+  }
+
   /** Wakes a sleepy cat; false if it was awake. */
   wake(id: number) {
     return this.asleep.delete(id);

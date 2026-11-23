@@ -20,6 +20,8 @@ import { candy, card, chip, pawBar, roundBtn, S, stage, title } from './style';
 import { button, C, H, toast, txt, W, DIM, isLand, fitCamera } from './ui';
 import { icon } from './icons';
 import { fmtTime, Tap } from '../core/share';
+import { crawl } from '../core/scratchy';
+import { hashStr, mulberry32 } from '../core/rng';
 import { challenge, drawCard, prepareDailyShare, snapshot } from './share';
 
 export type LevelData = { mode: 'level'; n: number } | { mode: 'daily'; date: string };
@@ -68,6 +70,7 @@ export class LevelScene extends Phaser.Scene {
   private hintBtn!: Phaser.GameObjects.Container;
   private mask!: Phaser.Display.Masks.GeometryMask;
   private scratchyUntil = 0;
+  private exits = 0;
   private cue?: Phaser.GameObjects.GameObject[];
   private tipBox?: Phaser.GameObjects.Container;
   private preview?: Phaser.GameObjects.Graphics;
@@ -92,6 +95,7 @@ export class LevelScene extends Phaser.Scene {
     this.sendShare = undefined;
     this.boardShot = Promise.resolve(null);
     this.scratchyUntil = 0;
+    this.exits = 0;
     this.cue = undefined;
     this.tipBox = undefined;
     this.preview = undefined;
@@ -551,6 +555,8 @@ export class LevelScene extends Phaser.Scene {
     this.taps.push('exit');
     const cat = v.cat;
     const kittens = this.board.remove(cat.id);
+    this.exits++;
+    if (cat.breed !== SCRATCHY) this.time.delayedCall(260, () => this.crawlScratchy());
     v.busy = true;
     v.mood = 'happy';
     v.hint = false;
@@ -666,6 +672,34 @@ export class LevelScene extends Phaser.Scene {
       });
     }
     toast(this, t('kittenWait'), isLand() ? H - 40 : H - 240);
+  }
+
+  /** After every cat that leaves, Scratchy crawls one cell (core/scratchy.ts keeps the level solvable). */
+  private crawlScratchy() {
+    if (this.ended) return;
+    const v = [...this.views.values()].find((x) => x.cat.breed === SCRATCHY && !x.busy && this.board.cats.has(x.cat.id));
+    if (!v) return;
+    const next = crawl(this.board, v.cat.id, mulberry32(hashStr(this.level.id) + this.exits * 7919));
+    if (!next) return;
+    const old = this.board.cats.get(v.cat.id)!.cells;
+    this.board.setCells(v.cat.id, next);
+    v.cat = this.board.cats.get(v.cat.id)!;
+    v.busy = true;
+    v.mood = 'happy';
+    // slide along: tail..head then the new head cell
+    const tr = [...old].reverse().concat([next[0]]);
+    const o = { s: 0 };
+    sfx.slide();
+    this.tweens.add({
+      targets: o, s: 1, duration: 280, ease: 'Sine.InOut',
+      onUpdate: () => this.redraw(v, this.pointsAt(tr, old.length, o.s)),
+      onComplete: () => {
+        v.busy = false;
+        v.mood = 'calm';
+        this.redraw(v);
+        this.previewId = -1;
+      },
+    });
   }
 
   /** Scratchy blocked: a playful paw swipe toward the tap, the blocker is revealed. No penalty but paws. */

@@ -349,3 +349,40 @@ describe('GDD 2.0 campaign (2026-11-23)', () => {
     expect(s.feedback.asked).toBe(false);
   });
 });
+
+describe('Scratchy crawls (2026-11-23)', () => {
+  it('keeps his length, moves like a snake and never makes a level unsolvable', async () => {
+    const { getLevel } = await import('../src/core/levels');
+    const { SCRATCHY } = await import('../src/core/content');
+    const { crawl } = await import('../src/core/scratchy');
+    const { mulberry32 } = await import('../src/core/rng');
+    let moved = 0;
+    for (let n = 14; n <= 60; n++) {
+      const lv = getLevel(n);
+      const sc = lv.cats.find((c) => c.breed === SCRATCHY);
+      if (!sc) continue;
+      for (let run = 0; run < 3; run++) {
+        const r = mulberry32(n * 31 + run);
+        const b = new Board(lv);
+        b.asleep.clear();
+        for (let step = 0; step < 200 && b.cats.size; step++) {
+          const free = b.freeCats();
+          expect(free.length, `level ${n} run ${run}: stuck`).toBeGreaterThan(0);
+          b.remove(free[Math.floor(r() * free.length)]);
+          if (!b.cats.has(sc.id)) continue;
+          const len = b.cats.get(sc.id)!.cells.length;
+          const next = crawl(b, sc.id, r);
+          if (!next) continue;
+          moved++;
+          b.setCells(sc.id, next);
+          const cells = b.cats.get(sc.id)!.cells;
+          expect(cells.length).toBe(len);
+          for (let i = 1; i < cells.length; i++) expect(Math.abs(cells[i].x - cells[i - 1].x) + Math.abs(cells[i].y - cells[i - 1].y)).toBe(1);
+          expect(b.solvable()).toBe(true);
+        }
+        expect(b.cats.size, `level ${n} run ${run}`).toBe(0);
+      }
+    }
+    expect(moved).toBeGreaterThan(20);
+  }, 120000);
+});
