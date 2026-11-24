@@ -390,5 +390,7 @@
  "icon_tag_sun": "ui/icon_tag_sun.webp",
  "icon_tag_cozy": "ui/icon_tag_cozy.webp",
  "icon_check": "ui/icon_check.webp",
- "icon_tag_play": "ui/icon_tag_play.webp"
+ "icon_tag_play": "ui/icon_tag_play.webp",
+ "icon_clock": "ui/icon_clock.webp",
+ "icon_friend": "ui/icon_friend.webp"
 }

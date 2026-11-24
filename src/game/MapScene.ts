@@ -6,11 +6,12 @@ import { CALENDAR, claimCalendar, rewardText, streakState } from '../core/retent
 import { nextTask } from '../core/meta';
 import { DAILY_FROM_LEVEL } from '../core/tutorial';
 import { t } from '../i18n';
-import { playMusic, setMusicOff, setMuted, sfx } from './sfx';
+import { playMusic, sfx } from './sfx';
 import { grant, persist, platform, save } from './state';
 import { badge, button, C, DIM, isLand, modal, panel, toast, txt, W, H, fitCamera } from './ui';
 import { blurredBackdrop, candy, chip, leaves, pawBar, ribbon, roundBtn, S, title } from './style';
 import { icon, IconName } from './icons';
+import { openSettings } from './settings';
 import { challenge, challengeOffered, markChallengeOffered } from './share';
 import { fmtTime } from '../core/share';
 
@@ -184,12 +185,8 @@ export class MapScene extends Phaser.Scene {
     });
   }
 
-  private settings() {
-    const close = modal(this, t('settings'), [], [
-      { label: `${t('sound')}: ${t(save.muted ? 'off' : 'on')}`, color: C.panel, onClick: () => { save.muted = !save.muted; setMuted(save.muted); persist(); close(); this.settings(); } },
-      { label: `${t('music')}: ${t(save.musicOff ? 'off' : 'on')}`, color: C.panel, onClick: () => { save.musicOff = !save.musicOff; setMusicOff(save.musicOff); persist(); close(); this.settings(); } },
-      { label: t('sendFeedback'), color: C.blue, onClick: () => { close(); this.feedback(false); } },
-    ], true);
+  settings() {
+    openSettings(this, () => this.feedback(false));
   }
 
   /** One optional satisfaction check after chapter 1 (GDD §10.4); never rewarded, never blocking. */

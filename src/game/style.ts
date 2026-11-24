@@ -243,3 +243,22 @@ export function blurredBackdrop(sc: Phaser.Scene, key: string) {
   sc.add.rectangle(W / 2, H / 2, W, H, 0x6d3fd4, im ? 0.35 : 1);
   return im;
 }
+
+/** "500 🐟 + 3 ⭐" drawn with the art icons; origin 0 / 0.5 / 1 like a text. */
+export function rewardRow(sc: Phaser.Scene, x: number, y: number, r: { fish?: number; stars?: number; paws?: number }, size = 22, color = '#ffffff', ox = 0.5) {
+  const c = sc.add.container(x, y);
+  const parts: [number, IconName][] = [];
+  if (r.fish) parts.push([r.fish, 'fish']);
+  if (r.stars) parts.push([r.stars, 'star']);
+  if (r.paws) parts.push([r.paws, 'paw']);
+  let cx = 0;
+  parts.forEach(([n, ic], i) => {
+    const tx = title(sc, cx, 0, (i ? '+ ' : '') + n, size, color).setOrigin(0, 0.5);
+    cx += tx.width + 4;
+    const im = icon(sc, ic, cx + size * 0.6, 0, size * 1.25);
+    cx += size * 1.25 + 8;
+    c.add([tx, im]);
+  });
+  c.iterate((o: Phaser.GameObjects.Components.Transform) => { o.x -= cx * ox; });
+  return c;
+}

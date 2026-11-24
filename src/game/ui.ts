@@ -108,6 +108,8 @@ export interface BtnOpts {
   icon?: IconName;
   /** status mark at the left edge of the button (lock / check) */
   badge?: IconName;
+  /** icon after the label (e.g. the star of a price) */
+  iconRight?: IconName;
 }
 
 /** Rounded 3D button. onClick is always called; disabled only changes the look. */
@@ -141,6 +143,15 @@ export function button(
     face.add(im);
   }
   if (o.badge) face.add(icon(s, o.badge, -w / 2 + h * 0.5, 0, h * 0.56));
+  if (o.iconRight) {
+    const is = Math.min(h * 0.55, (o.size ?? 34) * 1.3);
+    const im = icon(s, o.iconRight, 0, 0, is);
+    const total = t.width + 8 + is;
+    t.x = -total / 2 + t.width / 2;
+    im.x = t.x + t.width / 2 + 8 + is / 2;
+    if (o.disabled) im.setAlpha(0.55);
+    face.add(im);
+  }
   c.add([g, face]);
   c.setSize(w, h + lip);
   c.setInteractive({ useHandCursor: true });

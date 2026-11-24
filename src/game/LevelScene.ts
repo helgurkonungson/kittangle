@@ -3,7 +3,7 @@ import { Board, BOX, EMPTY, headDir } from '../core/board';
 import {
   BREEDS, COMBO_BONUS_MAX, COMBO_WINDOW_MS, COST, DAILY_REWARD, DAILY_STREAK_BONUS, FISH_PER_CAT, levelReward, MOONY, SCRATCHY,
 } from '../core/content';
-import { CAMPAIGN_LEVELS, chapterKey, chapterOf, dailyNumber, getDaily, getLevel, isMilestone, stepOf, CHAPTER_LEN } from '../core/levels';
+import { chapterKey, chapterOf, dailyNumber, getDaily, getLevel, isMilestone, stepOf, CHAPTER_LEN } from '../core/levels';
 import { prevDate } from '../core/save';
 import { Cat, Cell, DX, DY, Level } from '../core/types';
 import { addFriendship } from '../core/friend';
@@ -11,6 +11,7 @@ import { CHAPTERS, progress } from '../core/meta';
 import { levelTips, pawsFor, TipKey } from '../core/tutorial';
 import { t } from '../i18n';
 import { drawCat, Mood } from './drawCat';
+import { openSettings } from './settings';
 import { bodyPath, drawBody, drawUnder, hasBodyArt, pathPoint } from './body';
 import { art, has, headKey } from './art';
 import { playMusic, sfx } from './sfx';
@@ -134,7 +135,7 @@ export class LevelScene extends Phaser.Scene {
 
     // board area: center column between the info panel and Scratchy in landscape, under the HUD in portrait
     const scratchy = this.level.cats.some((c) => c.breed === SCRATCHY);
-    const A = land ? { x: 360, y: 40, w: W - 360 - (scratchy ? 250 : 30), h: H - 80 } : { x: 20, y: 236, w: W - 40, h: H - 236 - 226 };
+    const A = land ? { x: 360, y: 40, w: W - 360 - (scratchy ? 250 : 110), h: H - 80 } : { x: 20, y: 236, w: W - 40, h: H - 236 - 226 };
     this.cs = Math.floor(Math.min(A.w / w, A.h / h, 110));
     this.ox = Math.round(A.x + (A.w - this.cs * w) / 2);
     this.oy = Math.round(A.y + (A.h - this.cs * h) / 2);
@@ -300,8 +301,6 @@ export class LevelScene extends Phaser.Scene {
   private drawHud() {
     const d = this.d;
     const land = isLand();
-    const name = d.mode === 'daily' ? t('dailyTitle', { n: dailyNumber(d.date) })
-      : d.n <= CAMPAIGN_LEVELS ? t('chapter_' + chapterKey(chapterOf(d.n))) : t('endless');
     const lvl = d.mode === 'daily' ? t('dailyShort') : t(this.level.hard ? 'hardLevel' : 'level', { n: d.n });
     const restart = () => {
       platform.track('level_restart', { id: this.level.id });
@@ -312,15 +311,14 @@ export class LevelScene extends Phaser.Scene {
     if (land) {
       // left info panel: logo, chapter card, round buttons (style board 2026-11-23)
       art(this, 'logo', 180, 78, 300, 130) ?? title(this, 180, 78, 'Kittangle', 56, '#ffd84a');
+      // card: just the level title, progress (or the daily timer), fish and paws
       const g = this.add.graphics();
       card(g, 28, 160, 304, 360, 30);
-      icon(this, 'cafe', 76, 212, 62);
-      const nt = txt(this, 200, 212, name, 26).setWordWrapWidth(180, true);
-      if (nt.height > 70) nt.setScale(70 / nt.height);
-      this.levelPill(180, 282, 250, lvl);
-      this.fishChip = chip(this, 180, 408, 150, 'fish', () => String(save.fish + this.earned));
-      if (d.mode === 'level') pawBar(this, 196, 346, 210, Math.max(0, stepOf(d.n) - 1), CHAPTER_LEN);
-      this.pawIcons = [0, 1, 2].map((i) => icon(this, 'paw', 180 + (i - 1) * 54, 474, 46));
+      this.levelTitle(180, 222, 270, lvl);
+      this.fishChip = chip(this, 196, 382, 160, 'fish', () => String(save.fish + this.earned));
+      if (d.mode === 'level') pawBar(this, 196, 302, 210, Math.max(0, stepOf(d.n) - 1), CHAPTER_LEN);
+      this.pawIcons = [0, 1, 2].map((i) => icon(this, 'paw', 180 + (i - 1) * 58, 462, 50));
+      roundBtn(this, W - 56, 52, 72, S.lavDeep, S.purpleLip, 'settings', () => openSettings(this));
       roundBtn(this, 76, 600, 86, S.purpleBtn, S.purpleLip, 'map', () => this.leave());
       roundBtn(this, 180, 600, 86, S.pink, S.pinkLip, '↻', restart);
       hintX = 284;
@@ -331,10 +329,9 @@ export class LevelScene extends Phaser.Scene {
       if (this.mascot) this.tweens.add({ targets: this.mascot, y: H + 18, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     } else {
       roundBtn(this, 66, 70, 84, S.purpleBtn, S.purpleLip, 'map', () => this.leave());
-      this.levelPill(W / 2, 70, 270, lvl);
+      roundBtn(this, 160, 70, 72, S.lavDeep, S.purpleLip, 'settings', () => openSettings(this));
+      this.levelTitle(W / 2 + 20, 70, 250, lvl);
       this.fishChip = chip(this, W - 100, 70, 150, 'fish', () => String(save.fish + this.earned));
-      const nt = title(this, W / 2, 138, name, 24);
-      if (nt.width > 380) nt.setScale(380 / nt.width);
       if (d.mode === 'level') pawBar(this, W / 2 - 50, 194, 260, Math.max(0, stepOf(d.n) - 1), CHAPTER_LEN);
       this.pawIcons = [0, 1, 2].map((i) => icon(this, 'paw', W - 150 + i * 44, 194, 40));
       roundBtn(this, W / 2 - 120, H - 110, 96, S.pink, S.pinkLip, '↻', restart);
@@ -343,8 +340,8 @@ export class LevelScene extends Phaser.Scene {
     }
     if (d.mode === 'daily') {
       const tx = land ? 180 : W / 2 - 50;
-      const ty = land ? 346 : 194;
-      icon(this, 'clock', tx - 70, ty, 34);
+      const ty = land ? 302 : 194;
+      icon(this, 'clock', tx - 64, ty, 44);
       this.timerText = title(this, tx + 10, ty, '', 28);
       const ch = challenge();
       if (ch && ch.date === d.date) title(this, land ? 180 : W / 2, land ? 530 : 236, t('challengeTarget', { t: fmtTime(ch.time) }), 22, '#ffd84a');
@@ -367,14 +364,10 @@ export class LevelScene extends Phaser.Scene {
     this.refreshUi();
   }
 
-  /** Violet "LEVEL 8" plate. */
-  private levelPill(x: number, y: number, w: number, label: string) {
-    const g = this.add.graphics();
-    g.fillStyle(C.inkN, 1).fillRoundedRect(x - w / 2 - 3, y - 29, w + 6, 64, 30);
-    g.fillStyle(S.purpleLip, 1).fillRoundedRect(x - w / 2, y - 26 + 5, w, 52, 26);
-    g.fillStyle(S.purpleBtn, 1).fillRoundedRect(x - w / 2, y - 26, w, 52, 26);
-    const tt = title(this, x, y - 1, label.toUpperCase(), 28);
-    if (tt.width > w - 30) tt.setScale((w - 30) / tt.width);
+  /** Level name as plain display text (no button-like plate). */
+  private levelTitle(x: number, y: number, w: number, label: string) {
+    const tt = title(this, x, y, label.toUpperCase(), 34);
+    if (tt.width > w) tt.setScale(w / tt.width);
     if (this.level.hard) tt.setColor('#ffd84a');
   }
 

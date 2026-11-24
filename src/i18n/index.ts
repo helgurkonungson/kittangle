@@ -43,16 +43,16 @@ const ru = {
   tip_collection: "Каждый спасенный кот растит дружбу ♥ со своей породой. Раз в день можно угостить породу рыбкой.",
   tip_event_t: "Событие недели",
   tip_event: "Собирай лапки 🐾 на уровнях и в головоломке дня. Награды недели и сезона ждут здесь.",
-  renovateNext: 'Дальше: {name}. Обновим мебель!',
-  nextRoom: 'Дальше: {name}',
+  renovateNext: "Обнови {lname}!",
+  nextRoom: "Обставь {lname}!",
   renovIntro1: 'Ремонт! Каждое задание делает предмет уютнее: у него появится новый вид, а уют и чаевые вырастут.',
   renovIntro2: 'Финальный ремонт: делаем люкс! Новые предметы ярче, уют и чаевые еще выше.',
   chapter_hall2: 'Зал: уют',
   chapter_attic2: 'Чердак: уют',
   chapter_hall3: 'Зал: люкс',
   chapter_attic3: 'Чердак: люкс',
-  task_decor1: 'Уютнее: {name}',
-  task_decor2: 'Люкс: {name}',
+  task_decor1: "{name} поуютнее",
+  task_decor2: "{name} люкс",
   task_hall2_s1: 'Испечь печенье',
   task_hall2_s2: 'Распутать котов у входа',
   task_hall2_s3: 'Повесить гирлянду',
@@ -161,7 +161,7 @@ const ru = {
   goldenFrame: 'Без единой ошибки! Золотая рамка: {name}',
   frames: 'Золотые рамки: {list}',
   task_story: '{name}',
-  task_decor: 'Обставить: {name}',
+  task_decor: "{name}",
   task_hall_s1: 'Протереть вывеску', task_hall_s2: 'Вымыть полы', task_hall_s3: 'Открыть двери',
   task_attic_s1: 'Разобрать коробки', task_attic_s2: 'Починить окно', task_attic_s3: 'Повесить гирлянду',
   done_story: 'Готово!',
@@ -324,16 +324,16 @@ const en: Dict = {
   tip_collection: "Every cat you rescue grows friendship ♥ with its breed. Once a day you can treat a breed with fish.",
   tip_event_t: "Weekly event",
   tip_event: "Collect paws 🐾 in levels and the daily puzzle. Weekly and season rewards are here.",
-  renovateNext: 'Next: {name}. Time to renovate!',
-  nextRoom: 'Next: {name}',
+  renovateNext: "Renovate the {lname}!",
+  nextRoom: "Furnish the {lname}!",
   renovIntro1: 'Renovation! Each task gives a piece a new cozier look and raises comfort and tips.',
   renovIntro2: 'Final renovation: deluxe! Brighter pieces, even more comfort and tips.',
   chapter_hall2: 'Hall: cozy',
   chapter_attic2: 'Attic: cozy',
   chapter_hall3: 'Hall: deluxe',
   chapter_attic3: 'Attic: deluxe',
-  task_decor1: 'Cozier: {name}',
-  task_decor2: 'Deluxe: {name}',
+  task_decor1: "Cozier {lname}",
+  task_decor2: "Deluxe {lname}",
   task_hall2_s1: 'Bake cookies',
   task_hall2_s2: 'Untangle cats at the door',
   task_hall2_s3: 'Hang a garland',
@@ -442,7 +442,7 @@ const en: Dict = {
   goldenFrame: 'Flawless! Golden frame: {name}',
   frames: 'Golden frames: {list}',
   task_story: '{name}',
-  task_decor: 'Furnish: {name}',
+  task_decor: "New {lname}",
   task_hall_s1: 'Polish the sign', task_hall_s2: 'Mop the floor', task_hall_s3: 'Open the doors',
   task_attic_s1: 'Sort the boxes', task_attic_s2: 'Fix the window', task_attic_s3: 'Hang the lights',
   done_story: 'Done!',
@@ -572,10 +572,13 @@ const dicts: Record<string, Partial<Dict>> = { ru, en, es, pt, de, fr, tr, id, j
 export const LANGS = Object.keys(dicts);
 export const enDict = en;
 let cur: Partial<Dict> = en;
+let curCode = 'en';
 
 export function setLang(code: string) {
   cur = dicts[code] ?? en;
+  curCode = dicts[code] ? code : 'en';
 }
+export const lang = () => curCode;
 
 export function t(key: keyof Dict | string, vars: Record<string, string | number> = {}): string {
   const s = (cur as Record<string, string>)[key] ?? (en as Record<string, string>)[key] ?? key;

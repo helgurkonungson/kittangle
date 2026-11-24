@@ -5,7 +5,8 @@ import { t } from '../i18n';
 import { art, has } from './art';
 import { playMusic, sfx } from './sfx';
 import { platform, save } from './state';
-import { candy, chip, roundBtn, S, stage, title } from './style';
+import { candy, roundBtn, S, stage, title } from './style';
+import { openSettings } from './settings';
 import { fitCamera, H, isLand, RES, toast, W } from './ui';
 
 type Img = Phaser.GameObjects.Image;
@@ -42,14 +43,14 @@ export class TitleScene extends Phaser.Scene {
   private cats(land: boolean) {
     // positions are tuned to the two room pictures (screen units after the cover fit)
     const P = land
-      ? { white: [600, 338, 175], tree: [210, 205, 112], sofa: [668, 508, 128], rug: [560, 640, 240] }
-      : { white: [420, 552, 122], tree: [86, 492, 92], sofa: [462, 818, 118], rug: [250, 928, 205] };
+      ? { white: [600, 338, 175], tree: [210, 190, 112], sofa: [668, 508, 128], rug: [560, 640, 240] }
+      : { white: [420, 552, 122], tree: [86, 478, 92], sofa: [462, 818, 118], rug: [250, 928, 205] };
 
     // white cat on the windowsill, seen from behind; the tail sways from its base
     const [wx, wy, wh] = P.white;
     const white = this.piece('menu_white_back', wx, wy, wh, 0.5, 1);
     if (white) {
-      const tail = this.piece('menu_white_tail', wx + white.displayWidth * 0.2, wy - white.displayHeight * 0.13, wh * 0.62, 0.45, 0.97);
+      const tail = this.piece('menu_white_tail', wx + white.displayWidth * 0.06, wy - white.displayHeight * 0.13, wh * 0.62, 0.45, 0.97);
       if (tail) {
         tail.setDepth(white.depth + 1);
         this.tweens.add({ targets: tail, angle: { from: -9, to: 13 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
@@ -76,9 +77,9 @@ export class TitleScene extends Phaser.Scene {
     const paw = this.piece('menu_ginger_paw', 0, 0, gw * 0.3, 0.5, 0.93);
     const ginger = this.piece('menu_ginger_play', gx, gy, gw, 0.5, 0.5, true);
     if (ginger && paw) {
-      // the paw grows out of the stump on the chest (sprite point 0.453, 0.5) and is drawn in front of it
-      const sx = gx + (0.453 - 0.5) * ginger.displayWidth;
-      const sy = gy + (0.53 - 0.5) * ginger.displayHeight;
+      // the paw starts at the shoulder under the chin (sprite point 0.5, 0.47), drawn in front of the chest stump
+      const sx = gx + (0.5 - 0.5) * ginger.displayWidth;
+      const sy = gy + (0.47 - 0.5) * ginger.displayHeight;
       paw.setPosition(sx, sy).setAngle(-25).setDepth(ginger.depth + 1);
       const yarn = this.piece('menu_yarn', sx - gw * 0.2, sy - gw * 0.42, gw * 0.3, 0.5, 0.5);
       const fish = this.piece('menu_fish', gx + gw * 0.55, gy + gw * 0.12, gw * 0.3, 0.5, 0.5);
@@ -165,8 +166,8 @@ export class TitleScene extends Phaser.Scene {
     tag.setStroke('#39243f', 8);
     this.plate(cx, tag.y, tag.width + 44, 50, 25, 0.82);
 
-    const playY = land ? 450 : 1058;
-    const play = candy(this, cx, playY, land ? 400 : 440, land ? 104 : 112, t('play', { n: save.level }), () => {
+    const playY = land ? 450 : 1032;
+    const play = candy(this, cx, playY, land ? 400 : 440, land ? 104 : 104, t('play', { n: save.level }), () => {
       sfx.node();
       this.scene.start('Level', { mode: 'level', n: save.level });
     }).setDepth(10);
@@ -182,7 +183,7 @@ export class TitleScene extends Phaser.Scene {
         this.scene.start('Level', { mode: 'daily', date: today });
       }],
     ];
-    const rowY = playY + (land ? 125 : 112);
+    const rowY = playY + (land ? 125 : 132);
     const step = land ? 108 : 124;
     // a violet plate under the buttons separates them from the busy room
     const top = playY - (land ? 76 : 82);
@@ -196,6 +197,6 @@ export class TitleScene extends Phaser.Scene {
       const l = title(this, x, rowY + (land ? 62 : 64), t(ic === 'daily' ? 'dailyShort' : ic), 21).setDepth(10);
       l.setStroke('#39243f', 7);
     });
-    chip(this, land ? 110 : W - 110, 52, 170, 'fish', () => String(save.fish)).c.setDepth(10);
+    roundBtn(this, land ? 60 : W - 60, 58, 80, S.lavDeep, S.purpleLip, 'settings', () => openSettings(this)).setDepth(10);
   }
 }

@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { tipOnce } from './tips';
 import { COLLECTIBLE, BREEDS } from '../core/content';
 import { setComplete, SETS } from '../core/live';
-import { rewardText } from '../core/retention';
 import { t } from '../i18n';
 import { drawCat } from './drawCat';
 import { art } from './art';
@@ -11,7 +10,7 @@ import { utcDate } from '../core/levels';
 import { sfx } from './sfx';
 import { grant, persist, platform, save } from './state';
 import { C, isLand, modal, toast, txt, W, H, fitCamera } from './ui';
-import { candy, chip, ribbon, roundBtn, S, stage, title } from './style';
+import { candy, chip, rewardRow, ribbon, roundBtn, S, stage, title } from './style';
 import { icon } from './icons';
 import { mix } from './drawCat';
 
@@ -56,14 +55,20 @@ export class CollectionScene extends Phaser.Scene {
       const rx = land ? 165 : W - gx;
       const ry = land ? y0 + chh / 2 + 26 : y0 + 18;
       if (done && !claimed) {
-        candy(this, land ? rx : rx - 120, ry, 240, 54, t('setClaim', { r: rewardText(set.reward) }), () => {
+        candy(this, land ? rx : rx - 120, ry, 240, 54, t('setClaim', { r: '' }).trim(), () => {
           save.setsClaimed.push(set.key);
           grant(set.reward);
           sfx.chest();
           platform.track('set_claim', { set: set.key });
           this.scene.restart();
-        }, '', S.yellow, S.yellowLip);
-      } else title(this, rx, ry, claimed ? t('setDone') : rewardText(set.reward), 22, claimed ? '#b8f52f' : '#ffe8f6').setOrigin(land ? 0.5 : 1, 0.5);
+        }, 'gift', S.yellow, S.yellowLip);
+      } else if (claimed) {
+        // the check icon + "set complete"
+        const tx = title(this, rx, ry, t('setDone').replace(/^✓\s*/u, ''), 22, '#b8f52f').setOrigin(land ? 0.5 : 1, 0.5);
+        const left = tx.x - tx.width * tx.originX;
+        tx.x += land ? 18 : 0;
+        icon(this, 'check', left - (land ? 4 : 22), ry, 30);
+      } else rewardRow(this, rx, ry, set.reward, 22, '#ffe8f6', land ? 0.5 : 1);
       set.breeds.forEach((b, i) => this.card(b, gx + cw / 2 + i * (cw + gap), y0 + (land ? 0 : 42) + chh / 2, cw, chh, si * 4 + i));
     });
 
@@ -97,7 +102,8 @@ export class CollectionScene extends Phaser.Scene {
       if (nm.width > w - 16) nm.setScale((w - 16) / nm.width);
       const pts = save.friend[b] ?? 0;
       const lv = friendLevel(pts);
-      title(this, x + 26, y + 22, `♥${lv}`, 18, lv >= FRIEND_MAX ? '#ffd84a' : '#ffffff');
+      icon(this, 'friend', x + 24, y + 24, 30);
+      title(this, x + 24, y + 25, String(lv), 16, lv >= FRIEND_MAX ? '#ffd84a' : '#ffffff');
       if (canTreat(save.friendTreat, b, utcDate())) txt(this, x + w - 24, y + 22, '🐟', 24);
       const zone = this.add.zone(cx, cy, w, h).setInteractive({ useHandCursor: true });
       zone.on('pointerdown', () => this.cardMenu(b));
@@ -106,7 +112,7 @@ export class CollectionScene extends Phaser.Scene {
       im?.setTintFill(0x7a52c7).setAlpha(0.9);
       icon(this, 'lock', cx, cy + 10, Math.min(w, h) * 0.32);
     }
-    if (breed.rare) title(this, x + w - 22, y + 22, '★', 26, '#ffd84a');
+    if (breed.rare) icon(this, 'star', x + w - 24, y + 24, 34);
   }
 
   /** Card menu: daily fish treat (fish sink, grows friendship) or accessory. */

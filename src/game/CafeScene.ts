@@ -1,11 +1,14 @@
 import Phaser from 'phaser';
 import { tipOnce } from './tips';
+
+/** base chapter key of each café room (its plain name) */
+const CAFE_ROOM_KEY = ['hall', 'attic', 'room3', 'room4'];
 import { CAFE_ROOMS, CAFE_SLOTS, CAFE_VARIANTS } from '../core/content';
-import { chapterChest, CHAPTERS, doTask, nextTask, progress, roomChapter } from '../core/meta';
+import { chapterChest, CHAPTERS, doTask, nextTask, progress } from '../core/meta';
 import { comfort, tipsAvailable, tipsRate } from '../core/retention';
 import { tagOf, TROPHY_ICON, updateVisitor, VISITORS } from '../core/live';
 import { BREEDS } from '../core/content';
-import { t } from '../i18n';
+import { lang, t } from '../i18n';
 import { art, sittingCat } from './art';
 import { playMusic, sfx } from './sfx';
 import { rewarded, rewardedReady } from './ads';
@@ -64,14 +67,14 @@ export class CafeScene extends Phaser.Scene {
     roundBtn(this, 60, 64, 84, S.pink, S.pinkLip, 'map', () => this.scene.start('Map')).setDepth(40);
     ribbon(this, W / 2 - 10, 64, 380, t('myCafe').toUpperCase(), 'cafe', 28).setDepth(40);
     chip(this, W - 84, 64, 124, 'star', () => String(save.stars)).c.setDepth(40);
-    const sub = title(this, W / 2, 134, `${t('chapter_' + CHAPTERS[roomChapter(save.tasksDone, r)].key)} · ${t('comfort', { n: comfort(save.cafe, save.cafeTier), r: tipsRate(save.cafe, save.cafeTier) })}`, 21).setDepth(41);
+    const sub = title(this, W / 2, 134, `${t('chapter_' + CAFE_ROOM_KEY[r])} · ${t('comfort', { n: comfort(save.cafe, save.cafeTier), r: tipsRate(save.cafe, save.cafeTier) })}`, 21).setDepth(41);
     const sw = Math.min(W - 40, sub.width + 36);
     this.add.graphics().setDepth(40).fillStyle(0x4b2a86, 0.92).fillRoundedRect(W / 2 - sw / 2, 134 - 20, sw, 40, 20)
       .lineStyle(3, C.inkN, 1).strokeRoundedRect(W / 2 - sw / 2, 134 - 20, sw, 40, 20);
     // room switch arrows: up on the wall, away from decor tap areas (see cafeLayout + layout test)
     const { prevRoom: pr, nextRoom: nr } = CAFE_UI;
     // room switch = labelled pills ("◀ Hall" / "Attic ▶"); a bare chevron read as the Back button
-    const roomName = (i: number) => t('chapter_' + CHAPTERS.find((c) => c.room === i)!.key);
+    const roomName = (i: number) => t('chapter_' + CAFE_ROOM_KEY[i]);
     if (r > 0) button(this, pr.x, pr.y, pr.w, pr.h, '◀ ' + roomName(r - 1), () => this.scene.restart({ room: r - 1 }), { color: C.blue, size: 26 });
     if (r < CAFE_ROOMS - 1) {
       const open = this.roomUnlocked(r + 1);
@@ -102,11 +105,11 @@ export class CafeScene extends Phaser.Scene {
         // tag badge sits on the item's top-right corner, not on the empty slot box
         const top = im ? im.y - im.displayHeight * im.originY : rect.y - rect.h / 2;
         const right = im ? im.x + im.displayWidth * 0.4 : rect.x + rect.w / 2 - 6;
-        // a small white badge, so it reads as a label and not as a toy lying on the furniture
+        // the tag icon on a soft white halo (no outline ring)
         const bx = Math.min(W - 26, right);
         const by = Math.max(170, top + 10);
-        this.add.circle(bx, by, 19, 0xffffff, 0.95).setStrokeStyle(3, C.inkN).setDepth(5);
-        icon(this, `tag_${tagOf(i, v)}`, bx, by, 30).setDepth(6);
+        for (const [rr, a] of [[26, 0.22], [21, 0.4], [16, 0.6]] as const) this.add.circle(bx, by, rr, 0xffffff, a).setDepth(5);
+        icon(this, `tag_${tagOf(i, v)}`, bx, by, 32).setDepth(6);
         const hr = rect;
         const hit = this.add.zone(hr.x, hr.y, hr.w, hr.h).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this.pickVariant(i));
@@ -146,7 +149,7 @@ export class CafeScene extends Phaser.Scene {
     this.drawTaskPanel();
     this.chapterIntro();
     const tips = tipsAvailable(save.cafe, save.tips.since, Date.now(), save.cafeTier);
-    button(this, 130, 1065, 210, 70, t('tipsLabel', { n: tips }), () => {
+    button(this, 130, 1065, 210, 70, String(tips), () => {
       const n = tipsAvailable(save.cafe, save.tips.since, Date.now(), save.cafeTier);
       if (n <= 0) return toast(this, t('tipsEmpty'), 1000);
       const collect = (got: number) => {
@@ -172,7 +175,7 @@ export class CafeScene extends Phaser.Scene {
           },
         },
       ], true);
-    }, { color: C.primary, size: 28, disabled: tips <= 0 });
+    }, { color: C.primary, size: 30, disabled: tips <= 0, iconRight: 'fish' });
   }
 
   private drawTaskPanel() {
@@ -183,10 +186,13 @@ export class CafeScene extends Phaser.Scene {
       txt(this, W / 2, 1195, t('allDone'), 28);
       return;
     }
+    const roomName = (key: string) => t('chapter_' + key);
+    const lname = (n: string) => (['de', 'ja', 'ko'].includes(lang()) ? n : n.toLowerCase());
     if (CHAPTERS[p.chapter].room !== this.room) {
-      // the story moved on to the other room: say where and why
+      // the story moved on to the other room: one short call to action
       const next = CHAPTERS[p.chapter];
-      txt(this, W / 2 - 70, 1195, t(next.stage ? 'renovateNext' : 'nextRoom', { name: t('chapter_' + next.key) }), 26)
+      const rn = roomName(CAFE_ROOM_KEY[next.room]);
+      txt(this, W / 2 - 70, 1195, t(next.stage ? 'renovateNext' : 'nextRoom', { name: rn, lname: lname(rn) }), 28)
         .setWordWrapWidth(440, true);
       button(this, W - 120, 1195, 140, 80, '▶', () => this.scene.restart({ room: CHAPTERS[p.chapter].room }), {
         color: C.green, size: 34,
@@ -195,13 +201,15 @@ export class CafeScene extends Phaser.Scene {
     }
     const ch = CHAPTERS[p.chapter];
     const task = ch.tasks[p.task];
-    txt(this, W / 2, 1152, t('chapterProgress', { name: t('chapter_' + ch.key), a: p.task, b: ch.tasks.length }), 22, C.muted);
+    // one line: what to do + progress in this stage
+    const slot = task.kind === 'decor' ? t('slot_' + CAFE_SLOTS[task.slot!]) : '';
     const name = task.kind === 'decor'
-      ? t(['task_decor', 'task_decor1', 'task_decor2'][ch.stage], { name: t('slot_' + CAFE_SLOTS[task.slot!]) })
+      ? t(['task_decor', 'task_decor1', 'task_decor2'][ch.stage], { name: slot, lname: lname(slot) })
       : t('task_' + task.id);
-    txt(this, 220, 1210, name, 28).setWordWrapWidth(360, true);
-    button(this, W - 150, 1205, 240, 80, t('doTask', { n: task.cost }), () => this.perform(), {
-      color: C.green, size: 28, disabled: save.stars < task.cost,
+    const nt = txt(this, 220, 1192, name, 28).setWordWrapWidth(360, true);
+    txt(this, 220, nt.y + nt.height / 2 + 20, `${p.task}/${ch.tasks.length}`, 22, C.muted);
+    button(this, W - 150, 1190, 240, 80, t('doTask', { n: task.cost }).replace(/\s*⭐/u, ''), () => this.perform(), {
+      color: C.green, size: 28, disabled: save.stars < task.cost, iconRight: 'star',
     });
   }
 
