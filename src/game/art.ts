@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BREEDS } from '../core/content';
 import { drawCat, type Mood } from './drawCat';
 import { bakeIcons } from './icons';
-import { platform, save } from './state';
+import { DEV, platform, save } from './state';
 import { fitCamera } from './ui';
 
 const BASE = `${import.meta.env.BASE_URL}art/`;
@@ -28,7 +28,7 @@ export class PreloadScene extends Phaser.Scene {
     // first run: straight into level 1, no title screen (GDD 2.0 §4); later the chapter map
     const go = () => {
       platform.ready();
-      const dev = Number(new URLSearchParams(location.search).get('play')); // dev: ?play=14 opens a level
+      const dev = DEV ? Number(new URLSearchParams(location.search).get('play')) : 0; // dev: ?play=14 opens a level
       if (dev > 0) this.scene.start('Level', { mode: 'level', n: dev });
       else if (save.level === 1 && !save.best[1]) this.scene.start('Level', { mode: 'level', n: 1 });
       else this.scene.start('Title');

@@ -12,11 +12,14 @@ import { setForcedMute, setMusicOff, setMuted } from './sfx';
 // one build per portal: `vite build --mode crazygames` etc.
 export const platform: IPlatform = import.meta.env.MODE === 'crazygames' ? new CrazyGamesPlatform() : new LocalPlatform();
 export let save: SaveData = migrate(null);
+/** dev / web build; portal builds (vite --mode crazygames) ignore the dev switches */
+export const DEV = import.meta.env.MODE !== 'crazygames';
 
 export async function initState() {
   platform.onMute(setForcedMute);
   await platform.init();
-  const q = new URLSearchParams(location.search);
+  // dev URL switches (?level, ?fish, ?reset, ...) are off in portal builds: players could cheat with them
+  const q = new URLSearchParams(DEV ? location.search : '');
   if (q.has('reset')) {
     clearLocalSave();
     // drop the flag so a later reload keeps the new progress
@@ -35,6 +38,8 @@ export async function initState() {
     save.visit.visitor = 9;
     save.visit.until = Date.now() + 3600e3;
   }
+  // dev: ?notips marks every tip as seen (clean screens for promo videos)
+  if (q.has('notips')) save.tipsSeen = ['blocked', 'hint', 'scratchy', 'sleepy', 'kitten', 'moony', 'boxes', 'fewFree', 'feed', 'hard', 'streak', 'daily', 'cafe', 'collection', 'event'] as typeof save.tipsSeen;
   setLang(q.get('lang') || platform.language());
   setMuted(save.muted);
   setMusicOff(save.musicOff);

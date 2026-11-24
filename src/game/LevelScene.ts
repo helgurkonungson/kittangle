@@ -16,7 +16,7 @@ import { bodyPath, drawBody, drawUnder, hasBodyArt, pathPoint } from './body';
 import { art, has, headKey } from './art';
 import { playMusic, sfx } from './sfx';
 import { betweenLevels, rewarded, rewardedReady } from './ads';
-import { addFish, grantPaws, persist, platform, save, unlockBreed } from './state';
+import { addFish, DEV, grantPaws, persist, platform, save, unlockBreed } from './state';
 import { PAWS } from '../core/live';
 import { candy, card, chip, pawBar, roundBtn, S, stage, title } from './style';
 import { button, C, H, toast, txt, W, DIM, isLand, fitCamera } from './ui';
@@ -171,7 +171,7 @@ export class LevelScene extends Phaser.Scene {
     zone.on('pointerout', () => this.hover(-1, -1));
 
     this.drawHud();
-    if (new URLSearchParams(location.search).has('debug')) this.exposeDebug();
+    if (DEV && new URLSearchParams(location.search).has('debug')) this.exposeDebug();
     this.startTime = this.time.now;
     if (d.mode === 'level') this.time.delayedCall(2500, () => getLevel(d.n + 1));
     if (d.mode === 'level' && d.n === 1) this.time.delayedCall(300, () => this.handCue());
@@ -430,9 +430,12 @@ export class LevelScene extends Phaser.Scene {
     const hand = txt(this, mid.x + 30, mid.y + 50, '👆', 64).setDepth(41);
     this.tweens.add({ targets: hand, x: mid.x + 10, y: mid.y + 30, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     const land = isLand();
-    const label = title(this, land ? 180 : W / 2, land ? 540 : H - 200, t('tut1'), land ? 24 : 30).setDepth(41);
-    if (land) label.setWordWrapWidth(300, true);
-    else if (label.width > W - 60) label.setScale((W - 60) / label.width);
+    // landscape: one line under the board (the left panel is full of buttons)
+    const bx = this.ox + (this.cs * this.level.w) / 2;
+    const by = Math.min(H - 16, this.oy + this.cs * this.level.h + 58);
+    const label = title(this, land ? bx : W / 2, land ? by : H - 200, t('tut1'), land ? 24 : 30).setDepth(41);
+    const maxW = land ? this.cs * this.level.w + 120 : W - 60;
+    if (label.width > maxW) label.setScale(maxW / label.width);
     this.cue = [a, hand, label];
   }
 
@@ -495,6 +498,23 @@ export class LevelScene extends Phaser.Scene {
       state: () => ({ ended: this.ended, blocked: this.blocked, cats: this.views.size, id: this.level.id, freeN: this.board.freeCats().length }),
       share: () => this.shareDaily(),
       leap: () => { this.leapers = [0, 4, 9]; this.celebrate(() => undefined); },
+      // promo recording: tap in world coordinates, level facts
+      tap: (x: number, y: number) => this.onTap(x, y),
+      // a cat that can move now (sleepers too: the tap wakes them)
+      go: () => {
+        const ok = (v: CatView) => !v.busy && !v.hidden && this.board.check(v.cat.id).free;
+        const vs = [...this.views.values()].filter(ok);
+        const awake = vs.filter((v) => v.awake);
+        return (awake.length ? awake : vs).map((v) => this.px(v.cat.cells[0]));
+      },
+      info: () => ({ w: this.level.w, h: this.level.h, cats: this.views.size,
+        scratchy: this.level.cats.some((c) => c.breed === SCRATCHY), moony: this.level.cats.some((c) => c.breed === MOONY) }),
+      // cats that look free but would bump into hidden Moony
+      moonyBumpers: () => [...this.views.values()].filter((v) => {
+        const r = this.board.check(v.cat.id);
+        return !v.hidden && !r.free && r.blocker >= 0 && this.views.get(r.blocker)?.hidden;
+      }).map((v) => this.px(v.cat.cells[0])),
+      hiddenAt: () => [...this.views.values()].filter((v) => v.hidden).map((v) => this.px(v.cat.cells[0])),
       og: async () => {
         const { w, h } = this.level;
         const board = await snapshot(this, this.ox - 30, this.oy - 30, this.cs * w + 60, this.cs * h + 72);
