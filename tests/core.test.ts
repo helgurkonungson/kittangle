@@ -168,7 +168,8 @@ import * as fs from 'fs';
 describe('i18n', () => {
   it('every locale keeps placeholders and covers the visible keys', () => {
     const unused = ['title', 'loginReward', 'room', 'buy', 'back', 'rare', 'sound', 'catsInCafe', 'task_story', 'trophyShelf'];
-    const ph = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join();
+    // {name} and {lname} (lower-case form) are the same value: a language picks the one its grammar needs
+    const ph = (s: string) => (s.replace(/\{lname\}/g, '{name}').match(/\{\w+\}/g) ?? []).sort().join();
     for (const f of fs.readdirSync('src/i18n/locales')) {
       const d = JSON.parse(fs.readFileSync('src/i18n/locales/' + f, 'utf8')) as Record<string, string>;
       for (const [k, v] of Object.entries(enDict)) {
