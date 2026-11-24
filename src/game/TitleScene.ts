@@ -74,12 +74,12 @@ export class TitleScene extends Phaser.Scene {
 
     // ginger on her back: the raised paw bats the yarn ball
     const [gx, gy, gw] = P.rug;
-    const paw = this.piece('menu_ginger_paw', 0, 0, gw * 0.3, 0.5, 0.93);
+    const paw = this.piece('menu_ginger_paw', 0, 0, gw * 0.32, 0.5, 0.93);
     const ginger = this.piece('menu_ginger_play', gx, gy, gw, 0.5, 0.5, true);
     if (ginger && paw) {
-      // the paw starts at the shoulder under the chin (sprite point 0.5, 0.47), drawn in front of the chest stump
-      const sx = gx + (0.5 - 0.5) * ginger.displayWidth;
-      const sy = gy + (0.47 - 0.5) * ginger.displayHeight;
+      // the paw sits on the shoulder (sprite point 0.472, 0.525) over the retouched chest stump; its base has no outline
+      const sx = gx + (0.472 - 0.5) * ginger.displayWidth;
+      const sy = gy + (0.525 - 0.5) * ginger.displayHeight;
       paw.setPosition(sx, sy).setAngle(-25).setDepth(ginger.depth + 1);
       const yarn = this.piece('menu_yarn', sx - gw * 0.2, sy - gw * 0.42, gw * 0.3, 0.5, 0.5);
       const fish = this.piece('menu_fish', gx + gw * 0.55, gy + gw * 0.12, gw * 0.3, 0.5, 0.5);

@@ -142,3 +142,34 @@ for im, n in zip(pieces(Image.open(SRC / 'menu' / 'menu_playing_cat.png').conver
     save(im, 'menu', f'menu_{n}', 512)
 
 MF.write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
+
+# ginger's playing paw (menu): no outline across the bottom end, it fades into the shoulder (2026-11-24)
+pw = Image.open(DST / 'menu' / 'menu_ginger_paw.webp').convert('RGBA')
+pa = np.array(pw).astype(np.float32)
+h = pa.shape[0]
+y0, y1 = int(h * 0.87), int(h * 0.955)
+fade = np.clip((y1 - np.arange(h)) / (y1 - y0), 0, 1)
+pa[:, :, 3] *= fade[:, None]
+Image.fromarray(pa.clip(0, 255).astype(np.uint8)).save(DST / 'menu' / 'menu_ginger_paw.webp', 'WEBP', quality=90, method=6)
+
+# ginger's chest stump (where the separate paw attaches) retouched into orange fur, silhouette outline restored
+import cv2
+gp = DST / 'menu' / 'menu_ginger_play.webp'
+g = np.array(Image.open(gp).convert('RGBA'))
+gh, gw_ = g.shape[:2]
+yy, xx = np.mgrid[0:gh, 0:gw_]
+cx, cy = 232 * gw_ / 512, 184 * gh / 365
+ell = ((xx - cx) / (27 * gw_ / 512)) ** 2 + ((yy - cy) / (23 * gh / 365)) ** 2 <= 1
+mask = (ell & (g[:, :, 3] > 200)).astype(np.uint8) * 255
+mask = cv2.dilate(mask, np.ones((5, 5), np.uint8))
+mask[g[:, :, 3] < 200] = 0
+src = g[:, :, :3].copy()
+band = cv2.dilate(mask, np.ones((25, 25), np.uint8)) > 0
+src[(src.mean(axis=2) < 110) & band] = (245, 150, 32)
+fill = cv2.cvtColor(cv2.inpaint(cv2.cvtColor(src, cv2.COLOR_RGB2BGR), mask, 9, cv2.INPAINT_TELEA), cv2.COLOR_BGR2RGB)
+fill = cv2.GaussianBlur(fill, (7, 7), 0)
+g[mask > 0, :3] = fill[mask > 0]
+ell2 = ((xx - cx) / (32 * gw_ / 512)) ** 2 + ((yy - cy) / (28 * gh / 365)) ** 2 <= 1
+near = cv2.dilate((g[:, :, 3] < 60).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
+g[ell2 & near & (g[:, :, 3] > 60) & (g[:, :, :3].mean(axis=2) > 110), :3] = (52, 16, 24)
+Image.fromarray(g).save(gp, 'WEBP', quality=90, method=6)
