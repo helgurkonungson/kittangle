@@ -206,8 +206,8 @@ export class CafeScene extends Phaser.Scene {
     const name = task.kind === 'decor'
       ? t(['task_decor', 'task_decor1', 'task_decor2'][ch.stage], { name: slot, lname: lname(slot) })
       : t('task_' + task.id);
-    const nt = txt(this, 220, 1192, name, 28).setWordWrapWidth(360, true);
-    txt(this, 220, nt.y + nt.height / 2 + 20, `${p.task}/${ch.tasks.length}`, 22, C.muted);
+    const nt = txt(this, 220, 1192, `${name} · ${p.task}/${ch.tasks.length}`, 28);
+    if (nt.width > 370) nt.setScale(370 / nt.width);
     button(this, W - 150, 1190, 240, 80, t('doTask', { n: task.cost }).replace(/\s*⭐/u, ''), () => this.perform(), {
       color: C.green, size: 28, disabled: save.stars < task.cost, iconRight: 'star',
     });

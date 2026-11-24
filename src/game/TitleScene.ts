@@ -43,8 +43,8 @@ export class TitleScene extends Phaser.Scene {
   private cats(land: boolean) {
     // positions are tuned to the two room pictures (screen units after the cover fit)
     const P = land
-      ? { white: [600, 338, 175], tree: [210, 190, 112], sofa: [668, 508, 128], rug: [560, 640, 240] }
-      : { white: [420, 552, 122], tree: [86, 478, 92], sofa: [462, 818, 118], rug: [250, 928, 205] };
+      ? { white: [600, 338, 175], tree: [210, 198, 112], sofa: [668, 508, 128], rug: [560, 640, 240] }
+      : { white: [420, 552, 122], tree: [86, 500, 92], sofa: [462, 818, 118], rug: [250, 928, 205] };
 
     // white cat on the windowsill, seen from behind; the tail sways from its base
     const [wx, wy, wh] = P.white;
@@ -81,7 +81,7 @@ export class TitleScene extends Phaser.Scene {
       const sx = gx + (0.472 - 0.5) * ginger.displayWidth;
       const sy = gy + (0.525 - 0.5) * ginger.displayHeight;
       paw.setPosition(sx, sy).setAngle(-25).setDepth(ginger.depth + 1);
-      const yarn = this.piece('menu_yarn', sx - gw * 0.2, sy - gw * 0.42, gw * 0.3, 0.5, 0.5);
+      const yarn = this.piece('menu_yarn', sx - gw * 0.06, sy - gw * 0.42, gw * 0.3, 0.5, 0.5);
       const fish = this.piece('menu_fish', gx + gw * 0.55, gy + gw * 0.12, gw * 0.3, 0.5, 0.5);
       fish?.setAngle(-14);
       const yx = yarn?.x ?? 0;

@@ -55,13 +55,13 @@ export class CollectionScene extends Phaser.Scene {
       const rx = land ? 165 : W - gx;
       const ry = land ? y0 + chh / 2 + 26 : y0 + 18;
       if (done && !claimed) {
-        candy(this, land ? rx : rx - 120, ry, 240, 54, t('setClaim', { r: '' }).trim(), () => {
+        candy(this, land ? rx : rx - 110, land ? ry : ry - 4, land ? 240 : 220, land ? 54 : 42, t('setClaim', { r: '' }).trim(), () => {
           save.setsClaimed.push(set.key);
           grant(set.reward);
           sfx.chest();
           platform.track('set_claim', { set: set.key });
           this.scene.restart();
-        }, 'gift', S.yellow, S.yellowLip);
+        }, 'gift', S.yellow, S.yellowLip).setDepth(5);
       } else if (claimed) {
         // the check icon + "set complete"
         const tx = title(this, rx, ry, t('setDone').replace(/^✓\s*/u, ''), 22, '#b8f52f').setOrigin(land ? 0.5 : 1, 0.5);
