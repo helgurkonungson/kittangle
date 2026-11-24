@@ -3,7 +3,7 @@ import { tipOnce } from './tips';
 import { CAFE_ROOMS, CAFE_SLOTS, CAFE_VARIANTS } from '../core/content';
 import { chapterChest, CHAPTERS, doTask, nextTask, progress, roomChapter } from '../core/meta';
 import { comfort, tipsAvailable, tipsRate } from '../core/retention';
-import { TAG_ICON, tagOf, TROPHY_ICON, updateVisitor, VISITORS } from '../core/live';
+import { tagOf, TROPHY_ICON, updateVisitor, VISITORS } from '../core/live';
 import { BREEDS } from '../core/content';
 import { t } from '../i18n';
 import { art, sittingCat } from './art';
@@ -14,6 +14,7 @@ import { button, C, dialog, modal, portraitColumn, toast, txt, W, panel } from '
 import { chip, ribbon, roundBtn, S, title } from './style';
 
 import { CAFE_UI, type Rect, placeOf, SEATS } from './cafeLayout';
+import { icon, type IconName } from './icons';
 
 const WALL = [0xf6dfc6, 0xe9e0ef]; // hall: peach, attic: dusty lavender (art bible color script)
 const FLOOR = [0xe3c49f, 0xd8b98e]; // hall: honey wood, attic: pine
@@ -105,7 +106,7 @@ export class CafeScene extends Phaser.Scene {
         const bx = Math.min(W - 26, right);
         const by = Math.max(170, top + 10);
         this.add.circle(bx, by, 19, 0xffffff, 0.95).setStrokeStyle(3, C.inkN).setDepth(5);
-        txt(this, bx, by, TAG_ICON[tagOf(i, v)], 22).setDepth(6);
+        icon(this, `tag_${tagOf(i, v)}`, bx, by, 30).setDepth(6);
         const hr = rect;
         const hit = this.add.zone(hr.x, hr.y, hr.w, hr.h).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this.pickVariant(i));
@@ -284,11 +285,14 @@ export class CafeScene extends Phaser.Scene {
 
   private pickVariant(slot: number) {
     const r = this.room;
-    const close = modal(this, t('slot_' + CAFE_SLOTS[slot]), [t('chooseVariant'), t('visitorHint')],
+    // the tag icons are on the buttons, so the hint line drops its emoji
+    const hint = t('visitorHint').replace(/[🧶🛋☀]\uFE0F?\s?/gu, '');
+    const close = modal(this, t('slot_' + CAFE_SLOTS[slot]), [t('chooseVariant'), hint],
       CAFE_VARIANTS[r].map((color, v) => ({
-        // later looks open with the cozy / deluxe renovation chapters
-        // same name whether open or locked: look name + what guests like about it
-        label: `${v > save.cafeTier[r][slot] ? '🔒 ' : save.cafe[r][slot] === v ? '✓ ' : ''}${t(['variantBasic', 'variantCozy', 'variantDeluxe'][v])} · ${TAG_ICON[tagOf(slot, v)]} ${t('tag_' + tagOf(slot, v))}`,
+        // same name whether open or locked: look name + what guests like about it; lock / check as a badge
+        label: `${t(['variantBasic', 'variantCozy', 'variantDeluxe'][v])} · ${t('tag_' + tagOf(slot, v))}`,
+        icon: `tag_${tagOf(slot, v)}` as IconName,
+        badge: (v > save.cafeTier[r][slot] ? 'lock' : save.cafe[r][slot] === v ? 'check' : undefined) as IconName | undefined,
         color,
         disabled: v > save.cafeTier[r][slot],
         onClick: () => {

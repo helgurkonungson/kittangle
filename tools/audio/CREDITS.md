@@ -18,3 +18,6 @@ ui_level_unlocked → unlock, reward_fish_collect → coin, reward_paw_medal →
 cafe_decoration_place → task, daily_complete → daily, map_transition → scene, music_*_loop → music_menu/level/cafe/daily.
 Conversion: SFX trimmed, loudness-normalized to −16 LUFS, mono MP3 80 kbps; music crossfaded (`loop.py`, 2 s),
 −20 LUFS, stereo MP3 64 kbps. Music is fetched and decoded only when its scene plays.
+
+Update 2026-11-24 (Mac `audio2/`, now archived): new music_menu, music_cafe, meow_1…meow_6 and purr (purrloop = full
+purr, purr = first 2.2 s with a fade). Source per the user: same Stable Audio open model and license as above.

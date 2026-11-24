@@ -13,7 +13,9 @@ export type IconName =
   | 'fish' | 'next' | 'star' | 'heart' | 'heart_empty' | 'paw' | 'back' | 'sound' | 'mute' | 'hint' | 'feed'
   | 'daily' | 'cafe' | 'collection' | 'gift' | 'play' | 'clock' | 'check' | 'lock' | 'flame'
   // art-only icons (GDD 2.0 sheets A10–A12); fall back to a drawn icon when the art is missing
-  | 'map' | 'music' | 'settings' | 'chest' | 'medal' | 'sleep' | 'family' | 'box' | 'flag' | 'feedback' | 'badge' | 'scratchy';
+  | 'map' | 'music' | 'settings' | 'chest' | 'medal' | 'sleep' | 'family' | 'box' | 'flag' | 'feedback' | 'badge' | 'scratchy'
+  // café guest tags (art 2026-11-24)
+  | 'tag_cozy' | 'tag_play' | 'tag_sun';
 
 /** Generated-art key used when the file exists (Art/PROMPTS.md 1.5 / 1.12). */
 const ART: Partial<Record<IconName, string>> = {
@@ -23,11 +25,12 @@ const ART: Partial<Record<IconName, string>> = {
   collection: 'icon_collection', lock: 'icon_lock', flame: 'icon_streak',
   map: 'icon_map', music: 'icon_music', settings: 'icon_settings', chest: 'icon_chest', medal: 'icon_paw_medal',
   sleep: 'sleep_zzz', family: 'family_link', box: 'box_0', flag: 'icon_flag', feedback: 'icon_feedback', badge: 'icon_chapter_badge', scratchy: 'scratchy_idle',
+  check: 'icon_check', tag_cozy: 'icon_tag_cozy', tag_play: 'icon_tag_play', tag_sun: 'icon_tag_sun',
 };
 /** drawn stand-ins for art-only icons */
 const FALLBACK: Partial<Record<IconName, IconName>> = {
   map: 'play', music: 'sound', settings: 'sound', chest: 'gift', medal: 'paw', sleep: 'clock', family: 'heart', box: 'lock',
-  flag: 'star', feedback: 'heart', badge: 'star', scratchy: 'paw',
+  flag: 'star', feedback: 'heart', badge: 'star', scratchy: 'paw', tag_cozy: 'heart', tag_play: 'paw', tag_sun: 'star',
 };
 
 export function iconKey(s: Phaser.Scene, n: IconName): string {

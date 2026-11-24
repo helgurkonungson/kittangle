@@ -66,7 +66,7 @@ export class MapScene extends Phaser.Scene {
     const giftReady = save.level > 1 && save.calendar.last !== today;
     // the streak lives on the Daily button label, never as loose text over the road
     const st = streakState(save.daily.last, save.daily.streak, today);
-    const flame = st.alive && dailyOpen ? ` 🔥${st.streak}` : '';
+    const flame = st.alive && dailyOpen ? ` ${st.streak}` : '';
     const items: [IconName, string, number, number, () => void, boolean][] = [
       ['cafe', t('cafe'), S.pink, S.pinkLip, () => this.scene.start('Cafe'), !!task && save.stars >= task.cost],
       ['collection', t('collection'), 0x22c3e6, 0x1590a8, () => this.scene.start('Collection'), false],
@@ -85,6 +85,13 @@ export class MapScene extends Phaser.Scene {
       const b = roundBtn(this, x, y, land ? 92 : 96, col, lip, ic, fn);
       const l = title(this, x, y + 64, label, 20);
       if (ic === 'daily' && st.atRisk) l.setColor('#ffd84a');
+      // streak: the flame icon (art) in front of the label
+      if (ic === 'daily' && flame) {
+        const f = icon(this, 'flame', 0, l.y - 2, 30);
+        const total = f.displayWidth + 4 + l.width;
+        f.x = x - total / 2 + f.displayWidth / 2;
+        l.x = f.x + f.displayWidth / 2 + 4 + l.width / 2;
+      }
       if (dot) badge(this, b, 34, -34);
     });
 

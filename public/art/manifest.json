@@ -386,5 +386,9 @@
  "menu_ginger_play": "menu/menu_ginger_play.webp",
  "menu_ginger_paw": "menu/menu_ginger_paw.webp",
  "menu_yarn": "menu/menu_yarn.webp",
- "menu_fish": "menu/menu_fish.webp"
+ "menu_fish": "menu/menu_fish.webp",
+ "icon_tag_sun": "ui/icon_tag_sun.webp",
+ "icon_tag_cozy": "ui/icon_tag_cozy.webp",
+ "icon_check": "ui/icon_check.webp",
+ "icon_tag_play": "ui/icon_tag_play.webp"
 }

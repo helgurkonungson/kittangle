@@ -106,6 +106,8 @@ export interface BtnOpts {
   size?: number;
   disabled?: boolean;
   icon?: IconName;
+  /** status mark at the left edge of the button (lock / check) */
+  badge?: IconName;
 }
 
 /** Rounded 3D button. onClick is always called; disabled only changes the look. */
@@ -138,6 +140,7 @@ export function button(
     if (o.disabled) im.setAlpha(0.55);
     face.add(im);
   }
+  if (o.badge) face.add(icon(s, o.badge, -w / 2 + h * 0.5, 0, h * 0.56));
   c.add([g, face]);
   c.setSize(w, h + lip);
   c.setInteractive({ useHandCursor: true });
@@ -205,6 +208,8 @@ export interface ModalBtn {
   onClick: () => void;
   color?: number;
   disabled?: boolean;
+  icon?: IconName;
+  badge?: IconName;
 }
 
 export const DIM = 0x2a1530; // plum scrim instead of black
@@ -264,7 +269,7 @@ export function modal(s: Phaser.Scene, title: string, lines: string[], buttons: 
   }
   buttons.forEach((b, i) =>
     c.add(button(s, W / 2, by + i * 118, 460, i === 0 ? 96 : 84, b.label, b.onClick, {
-      color: b.color, disabled: b.disabled, size: i === 0 ? 36 : 32,
+      color: b.color, disabled: b.disabled, size: i === 0 ? 36 : 32, icon: b.icon, badge: b.badge,
     })),
   );
   c.setAlpha(0).setY(30);
