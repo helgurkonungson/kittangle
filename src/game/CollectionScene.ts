@@ -145,7 +145,8 @@ export class CollectionScene extends Phaser.Scene {
     if (!save.accessories.length) return toast(this, `${t('chooseAccessory')}: 🐾 ${t('event')}`, 1150);
     const close = modal(this, t('chooseAccessory'), [], [
       ...save.accessories.map((a) => ({
-        label: (save.equipped[b] === a ? '✓ ' : '') + t('acc_' + a),
+        label: t('acc_' + a),
+        badge: save.equipped[b] === a ? 'check' as const : undefined,
         color: C.blue,
         onClick: () => {
           save.equipped[b] = a;

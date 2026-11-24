@@ -15,7 +15,7 @@ for f in "$SRC"/*.wav; do
     ffmpeg -loglevel error -y -i "$tmp" -af "loudnorm=I=-20:TP=-2" -ac 2 -b:a 96k "$DST/$n.mp3"
     rm -f "$tmp"
   else
-    ffmpeg -loglevel error -y -i "$f" -af "silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,afade=t=out:st=0:d=0.02:curve=tri,loudnorm=I=-16:TP=-1.5" -ac 1 -b:a 96k "$DST/$n.mp3"
+    ffmpeg -loglevel error -y -i "$f" -af "silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,afade=t=in:d=0.015,areverse,loudnorm=I=-16:TP=-1.5" -ac 1 -b:a 96k "$DST/$n.mp3"
   fi
   echo "ok $n"
 done

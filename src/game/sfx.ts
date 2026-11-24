@@ -245,7 +245,8 @@ const seq = (notes: number[], step: number, type: OscillatorType, vol: number) =
 export const sfx = {
   click: () => file('ui_click', 0.5) || tone(900, 700, 0.06, 'triangle', 0.08),
   /** generated meows (Stable Audio), synth voices as fallback */
-  meow: (pitch = 1) => file('meow', 0.55, pitch) || meowSynth(pitch, 0.5),
+  // recorded meows keep (almost) their natural speed: a big playback-rate change makes them sound chipmunky
+  meow: (pitch = 1) => file('meow', 0.7, 1 + Math.max(-0.06, Math.min(0.12, (pitch - 1) * 0.25))) || meowSynth(pitch, 0.5),
   slide: () => file('slide', 0.35),
   pop: () => file('pop', 0.5),
   purr: () => file('purr', 0.7) || tone(70, 55, 0.35, 'sawtooth', 0.05),

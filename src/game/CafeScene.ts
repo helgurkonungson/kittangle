@@ -75,10 +75,10 @@ export class CafeScene extends Phaser.Scene {
     if (r > 0) button(this, pr.x, pr.y, pr.w, pr.h, '◀ ' + roomName(r - 1), () => this.scene.restart({ room: r - 1 }), { color: C.blue, size: 26 });
     if (r < CAFE_ROOMS - 1) {
       const open = this.roomUnlocked(r + 1);
-      const nb = button(this, nr.x, nr.y, nr.w, nr.h, (open ? '' : '🔒 ') + roomName(r + 1) + ' ▶', () => {
+      const nb = button(this, nr.x, nr.y, nr.w, nr.h, roomName(r + 1) + ' ▶', () => {
         if (!this.roomUnlocked(r + 1)) return toast(this, t('roomLocked'));
         this.scene.restart({ room: r + 1 });
-      }, { color: C.blue, size: 26 });
+      }, { color: C.blue, size: 26, icon: open ? undefined : 'lock' });
       if (!open) nb.setAlpha(0.6);
     }
 
