@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
   const portal = mode in SDK;
   return {
     base: './',
+    // build stamp: appended to audio/art URLs so a new build never plays cached old files
+    define: { __BUILD__: JSON.stringify(Date.now().toString(36)) },
     plugins: [portalSdk(mode)],
     build: {
       outDir: portal ? `dist-${mode}` : 'dist',

@@ -17,7 +17,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.json('art_manifest', BASE + 'manifest.json');
+    this.load.json('art_manifest', BASE + 'manifest.json?v=' + __BUILD__);
   }
 
   create() {
@@ -34,7 +34,7 @@ export class PreloadScene extends Phaser.Scene {
       else this.scene.start('Title');
     };
     if (!keys.length) return go();
-    for (const k of keys) this.load.image(k, BASE + m[k]);
+    for (const k of keys) this.load.image(k, BASE + m[k] + '?v=' + __BUILD__);
     this.load.once('complete', go);
     this.load.start();
   }

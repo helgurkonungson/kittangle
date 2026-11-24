@@ -14,6 +14,7 @@ let musicWanted: string | null = null;
 let musicOff = false; // separate music toggle (GDD 2.0 §12.2): SFX can stay on
 const musicLoading = new Set<string>();
 const BASE = `${import.meta.env.BASE_URL}audio/`;
+const V = `?v=${__BUILD__}`;
 
 if (typeof window !== 'undefined')
   window.addEventListener('pointerdown', () => {
@@ -67,14 +68,14 @@ async function loadAudio() {
   const c = ac();
   if (!c) return;
   try {
-    const res = await fetch(BASE + 'manifest.json');
+    const res = await fetch(BASE + 'manifest.json' + V);
     if (!res.ok) return;
     const names: string[] = await res.json();
     // music is decoded only when wanted (a 2-minute stereo loop is ~40 MB of PCM)
     await Promise.all(
       names.filter((n) => !n.startsWith('music_')).map(async (n) => {
         try {
-          const r = await fetch(`${BASE}${n}.mp3`);
+          const r = await fetch(`${BASE}${n}.mp3${V}`);
           if (r.ok) buffers.set(n, await c.decodeAudioData(await r.arrayBuffer()));
         } catch {
           /* missing or broken file: procedural fallback */
@@ -129,7 +130,7 @@ export function playMusic(name: string) {
   if (!buf) {
     if (musicLoading.has(name)) return;
     musicLoading.add(name);
-    void fetch(`${BASE}${name}.mp3`)
+    void fetch(`${BASE}${name}.mp3${V}`)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
       .then((b) => c.decodeAudioData(b))
       .then((d) => {
